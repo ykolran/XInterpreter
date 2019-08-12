@@ -1,0 +1,44 @@
+﻿program				→	usingDeclaration* EOF
+
+usingDeclaration	→	"using" IDENTIFIER block
+						| declaration
+
+declaration			→	varDeclaration 
+						| statement
+
+varDeclaration		→	"var" IDENTIFIER "=" expression ";"
+
+statement			→	expressionStatement
+						| forStatement
+						| ifStatement
+						| printStatement
+						| whileStatement
+						| block
+
+expressionStatement	→	expression ";"
+forStatement		→	"for" "(" ( varDeclaration | expressionStatement | ";" ) expression? ";" expression? ")" statement
+ifStatement         →	"if" "(" expression ")" statement ( "else" statement )?
+printStatement      →	"print" expression ";"
+whileStatement      →	"while" "(" expression ")" statement
+block				→	"{" declaration* "}"
+
+expression			→	assignment
+
+assignment			→	IDENTIFIER "=" assignment
+						| logic_or
+
+logic_or			→	logic_and ( "or" logic_and )* 
+logic_and			→	equality ( "and" equality )* 
+equality			→	comparison ( ( "!=" | "==" ) comparison )* 
+comparison			→	addition ( ( ">" | ">=" | "<" | "<=" ) addition )* 
+addition			→	multiplication ( ( "-" | "+" ) multiplication )* 
+multiplication		→	unary ( ( "/" | "*" ) unary )* 
+unary				→	( "!" | "-" ) unary | primary 
+primary				→	"true" | "false" | "this"
+						| NUMBER | STRING | IDENTIFIER | "(" expression ")"
+ 
+NUMBER				→	DIGIT+ ( "." DIGIT+ )? ("e" | "E" ("+" | "-")? DIGIT+)?
+STRING				→	'"' <any char except '"'>* '"'
+IDENTIFIER			→	ALPHA ( ALPHA | DIGIT )*
+ALPHA				→	'a' ... 'z' | 'A' ... 'Z' | '_'
+DIGIT				→	'0' ... '9'
