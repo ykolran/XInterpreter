@@ -59,6 +59,7 @@ private:
 	void expressionStatement();
 	void forStatement();
 	void ifStatement();
+	void returnStatement();
 	void whileStatement();
 	void expression();
 	void block();

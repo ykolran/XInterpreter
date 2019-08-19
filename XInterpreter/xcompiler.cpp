@@ -187,13 +187,17 @@ void XCompiler::statement()
 	{
 		printStatement();
 	}
-	else if (m_scanner.match(TokenT::FOR)) 
+	else if (m_scanner.match(TokenT::FOR))
 	{
-		forStatement();             
+		forStatement();
 	}
-	else if (m_scanner.match(TokenT::IF)) 
+	else if (m_scanner.match(TokenT::IF))
 	{
 		ifStatement();
+	}
+	else if (m_scanner.match(TokenT::RETURN))
+	{
+		returnStatement();
 	}
 	else if (m_scanner.match(TokenT::WHILE)) 
 	{
@@ -299,6 +303,25 @@ void XCompiler::ifStatement()
 	if (m_scanner.match(TokenT::ELSE)) 
 		statement();
 	patchJump(elseJump);
+}
+
+void XCompiler::returnStatement()
+{
+	if (m_type == FunctionType::SCRIPT) 
+	{
+		error("Cannot return from top-level code.");
+	}
+
+	if (m_scanner.match(TokenT::SEMICOLON))
+	{
+		emitReturn();
+	}
+	else 
+	{
+		expression();
+		m_scanner.consume(TokenT::SEMICOLON, "Expect ';' after return value.");
+		emitInstruction(OpCode::RETURN);
+	}
 }
 
 void XCompiler::whileStatement()
