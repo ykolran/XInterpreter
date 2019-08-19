@@ -14,6 +14,12 @@ Value::Value(const std::string& str) :
 {
 }
 
+Value::Value(std::shared_ptr<ObjFunction> fun) :
+	type(ValueType::OBJ),
+	obj(fun)
+{
+}
+
 Value::Value(ColumnLength len, double* c) : 
 	type(ValueType::OBJ), 
 	obj(new ObjColumn(len, c)) 
@@ -54,4 +60,9 @@ bool Value::isColumn() const
 bool Value::isFunction() const
 {
 	return isObj() && obj->isFunction();
+}
+
+std::shared_ptr<ObjFunction> Value::asFunction()
+{ 
+	return std::static_pointer_cast<ObjFunction>(obj); 
 }

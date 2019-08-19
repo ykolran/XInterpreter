@@ -10,6 +10,7 @@
 enum class OpCode : uint8_t
 {
 	CONSTANT,
+	NIL,
 	_TRUE,
 	_FALSE,
 	POP,
@@ -33,6 +34,7 @@ enum class OpCode : uint8_t
 	JUMP,
 	JUMP_IF_FALSE,
 	LOOP,
+	CALL,
 	RETURN
 };
 

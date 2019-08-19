@@ -7,15 +7,14 @@
 
 InterpretResult XVM::interpret(const char* source) 
 {
-	XCompiler compiler(source, FunctionType::SCRIPT);
-	CallFrame frame;
-	frame.function = compiler.compile();
-	if (!frame.function) {
+	XScanner scanner(source);
+	XCompiler compiler(scanner, "", FunctionType::SCRIPT);
+	m_file = nullptr;
+	std::shared_ptr<ObjFunction> function = compiler.compile();
+	if (!function) {
 		return InterpretResult::COMPILE_ERROR;
 	}
-	frame.ip = frame.function->m_chunk.begin();
-	frame.slots = m_stack.begin();
-	m_file = nullptr;
+	CallFrame frame(function, function->m_chunk.begin(), 0);
 	m_frames.push_back(frame);
 
 	return run();
@@ -40,16 +39,14 @@ InterpretResult XVM::binaryOp(OP op)
 		{
 			std::string b = pop();
 			std::string a = pop();
-			push(a + b);
-			return InterpretResult::OK;
+			return push(a + b);
 		}
 	}
 	if (bPeek.isNumber() && aPeek.isNumber())
 	{
 		Value b = pop();
 		Value a = pop();
-		push(op(a.asDouble(), b.asDouble()));
-		return InterpretResult::OK;
+		return push(op(a.asDouble(), b.asDouble()));
 	}
 	else if (bPeek.isColumn() && aPeek.isColumn())
 	{
@@ -63,8 +60,7 @@ InterpretResult XVM::binaryOp(OP op)
 			Value result(ColumnLength{ len });
 			for (int i = 0; i < len; i++)
 				result.asColumn().data[i] = op(a.asColumn().data[i], b.asColumn().data[i]);
-			push(result);
-			return InterpretResult::OK;
+			return push(result);
 		}
 		else if (len == 1)
 		{
@@ -74,8 +70,7 @@ InterpretResult XVM::binaryOp(OP op)
 			Value result(ColumnLength{ aPeek.asColumn().length });
 			for (int i = 0; i < aPeek.asColumn().length; i++)
 				result.asColumn().data[i] = op(a.asColumn().data[i], b.asColumn().data[0]);
-			push(result);
-			return InterpretResult::OK;
+			return push(result);
 		}
 		else if (aPeek.asColumn().length == 1)
 		{
@@ -85,8 +80,7 @@ InterpretResult XVM::binaryOp(OP op)
 			Value result(ColumnLength{ len });
 			for (int i = 0; i < len; i++)
 				result.asColumn().data[i] = op(a.asColumn().data[0], b.asColumn().data[i]);
-			push(result);
-			return InterpretResult::OK;
+			return push(result);
 		}
 		else
 		{
@@ -102,8 +96,7 @@ InterpretResult XVM::binaryOp(OP op)
 		Value result(ColumnLength{ b.asColumn().length });
 		for (int i = 0; i < b.asColumn().length; i++)
 			result.asColumn().data[i] = op(a.asDouble(), b.asColumn().data[i]);
-		push(result);
-		return InterpretResult::OK;
+		return push(result);
 	}
 	else if (bPeek.isNumber() && aPeek.isColumn())
 	{
@@ -113,8 +106,7 @@ InterpretResult XVM::binaryOp(OP op)
 		Value result(ColumnLength{ a.asColumn().length });
 		for (int i = 0; i < a.asColumn().length; i++)
 			result.asColumn().data[i] = op(a.asColumn().data[i], b.asDouble());
-		push(result);
-		return InterpretResult::OK;
+		return push(result);
 	}
 	else
 	{
@@ -147,22 +139,23 @@ InterpretResult XVM::run()
 		OpCode instruction = readOpCode();
 		InterpretResult result = InterpretResult::OK;
 
-		switch (instruction) 
+		switch (instruction)
 		{
-		case OpCode::CONSTANT:	push(readConstant());		 break;
-		case OpCode::_TRUE:		push(true);					 break;
-		case OpCode::_FALSE:	push(false);				 break;
-		case OpCode::POP:		pop();						 break;
-		case OpCode::GET_LOCAL: 
+		case OpCode::CONSTANT:	result = push(readConstant());	break;
+		case OpCode::NIL:		result = push(0.0);				break;
+		case OpCode::_TRUE:		result = push(true);			break;
+		case OpCode::_FALSE:	result = push(false);			break;
+		case OpCode::POP:		pop();							break;
+		case OpCode::GET_LOCAL:
 		{
 			uint8_t slot = readByte();
-			push(m_frames.back().slots[slot]);
+			result = push(m_stack[m_frames.back().slots + slot]);
 			break;
 		}
-		case OpCode::SET_LOCAL: 
+		case OpCode::SET_LOCAL:
 		{
 			uint8_t slot = readByte();
-			m_frames.back().slots[slot] = peek(0);
+			m_stack[m_frames.back().slots + slot] = peek(0);
 			break;
 		}
 		case OpCode::GET_GLOBAL:
@@ -174,10 +167,10 @@ InterpretResult XVM::run()
 				runtimeError("Undefined variable '%s'.", name.c_str());
 				return InterpretResult::RUNTIME_ERROR;
 			}
-			push(it->second);
+			result = push(it->second);
 			break;
 		}
-		case OpCode::DEFINE_GLOBAL: 
+		case OpCode::DEFINE_GLOBAL:
 		{
 			const Value& c = readConstant();
 			if (globals.find(c) == globals.end())
@@ -187,7 +180,7 @@ InterpretResult XVM::run()
 			pop();
 			break;
 		}
-		case OpCode::SET_GLOBAL: 
+		case OpCode::SET_GLOBAL:
 		{
 			const Value& value = readConstant();
 			const std::string& name(value);
@@ -206,7 +199,7 @@ InterpretResult XVM::run()
 		case OpCode::FILE:
 		{
 			intptr_t filePtr = 0;
-			for (int i = 0; i<sizeof(intptr_t); i++)
+			for (int i = 0; i < sizeof(intptr_t); i++)
 				filePtr |= static_cast<intptr_t>(*ip()++) << i * 8;
 
 			m_file = reinterpret_cast<CLogDataFile*>(filePtr);
@@ -215,7 +208,7 @@ InterpretResult XVM::run()
 		case OpCode::GET_COLUMN:
 		{
 			uint8_t slot = readByte();
-			push(Value(ColumnLength{m_file->m_sizeFilled}, m_file->m_data[slot]));
+			result = push(Value(ColumnLength{ m_file->m_sizeFilled }, m_file->m_data[slot]));
 			break;
 		}
 		case OpCode::EQUAL:
@@ -223,17 +216,17 @@ InterpretResult XVM::run()
 			Value b = pop();
 			Value a = pop();
 			if (b.isBool() && a.isBool())
-				push(a.asBool() == b.asBool());
+				result = push(a.asBool() == b.asBool());
 			else if (b.isNumber() && a.isNumber())
-				push(a.asDouble() == b.asDouble());
+				result = push(a.asDouble() == b.asDouble());
 			else if (b.isString() && a.isString())
-				push(a.asString() == b.asString());
+				result = push(a.asString() == b.asString());
 			else if (b.isColumn() && a.isColumn())
 			{
 				bool equals = (b.asColumn().length == a.asColumn().length);
-				for (int i=0; i<b.asColumn().length && equals; i++)
+				for (int i = 0; i < b.asColumn().length && equals; i++)
 					equals = (b.asColumn().data[i] == a.asColumn().data[i]);
-				push(equals);
+				result = push(equals);
 			}
 			break;
 		}
@@ -243,35 +236,55 @@ InterpretResult XVM::run()
 		case OpCode::DIVIDE:	result = binaryOp(divide);	 break;
 		case OpCode::GREATER:	result = binaryOp(greater);	 break;
 		case OpCode::LESS:		result = binaryOp(less);	 break;
-		case OpCode::NOT:		push(!pop().asBool());		 break;
+		case OpCode::NOT:		result = push(!pop().asBool());		 break;
 		case OpCode::NEGATE:	result = negate();			 break;
-		case OpCode::PRINT:		
+		case OpCode::PRINT:
 			printValue(DLG()->m_output, pop());
 			DLG()->m_output.AppendFormat("\r\n");
 			break;
-		case OpCode::JUMP: 
+		case OpCode::JUMP:
 		{
 			uint16_t offset = readShort();
 			ip() += offset;
 			break;
 		}
-		case OpCode::JUMP_IF_FALSE: 
+		case OpCode::JUMP_IF_FALSE:
 		{
 			uint16_t offset = readShort();
-			if (!peek(0)) 
+			if (!peek(0))
 				ip() += offset;
 			break;
 		}
-		case OpCode::LOOP: 
+		case OpCode::LOOP:
 		{
 			uint16_t offset = readShort();
 			ip() -= offset;
 			break;
 		}
-		case OpCode::RETURN:
-			return InterpretResult::OK;
+		case OpCode::CALL:
+		{
+			int argCount = readByte();
+			if (!callValue(peek(argCount), argCount))
+			{
+				return InterpretResult::RUNTIME_ERROR;
+			}
+			break;
 		}
+		case OpCode::RETURN:
+		{
+			Value funResult = pop();
+			int currentSlots = m_frames.back().slots;
 
+			m_frames.pop_back();
+			if (m_frames.empty())
+				return InterpretResult::OK;
+
+			m_stack.erase(m_stack.begin() + currentSlots, m_stack.end());
+			result = push(funResult);
+			break;
+		}
+		}
+		
 		if (result != InterpretResult::OK)
 			return result;
 	}
@@ -285,8 +298,7 @@ InterpretResult XVM::negate()
 		return InterpretResult::RUNTIME_ERROR;
 	}
 
-	push(-pop().asDouble());
-	return InterpretResult::OK;
+	return push(-pop().asDouble());
 }
 
 void XVM::printObj(CString& out, Value value) const
@@ -294,10 +306,10 @@ void XVM::printObj(CString& out, Value value) const
 	switch (value.obj->type)
 	{
 	case ObjType::FUNCTION:
-		if (value.asFunction().m_name.empty())
+		if (value.asFunction()->m_name.empty())
 			out.Append("<script>");
 		else
-			out.AppendFormat("<fn %s>", value.asFunction().m_name.c_str());
+			out.AppendFormat("<fn %s>", value.asFunction()->m_name.c_str());
 		break;
 	case ObjType::STRING: 
 		out.Append(value.asString().c_str());
@@ -310,6 +322,38 @@ void XVM::printObj(CString& out, Value value) const
 			out.Append("...");
 		break;
 	}
+}
+
+bool XVM::callValue(Value callee, int argCount) 
+{
+	if (callee.isObj()) 
+	{
+		switch (callee.obj->type) 
+		{
+		case ObjType::FUNCTION:
+			return call(callee.asFunction(), argCount);
+
+		default:
+			// Non-callable object type.                   
+			break;
+		}
+	}
+
+	runtimeError("Can only call functions and classes.");
+	return false;
+}
+
+bool XVM::call(std::shared_ptr<ObjFunction> function, int argCount)
+{
+	if (argCount != function->m_arity) 
+	{
+		runtimeError("Expected %d arguments but got %d.",
+			function->m_arity, argCount);
+		return false;
+	}
+
+	m_frames.emplace_back(function, function->m_chunk.begin(), m_stack.end() - m_stack.begin() - argCount - 1);
+	return true;
 }
 
 void XVM::printValue(CString& out, Value value) const
@@ -340,8 +384,21 @@ void XVM::runtimeError(const char* format, ...)
 	va_end(args);
 	DLG()->m_output.AppendFormat("\r\n");
 
-	DLG()->m_output.AppendFormat("[line %d] in script\r\n",
-		chunk().getLine(ip()));
-
+	for (int i = m_frames.size()-1; i >= 0; i--) 
+	{
+		// -1 because the IP is sitting on the next instruction to be
+		// executed.                                                 
+		std::vector<uint8_t>::const_iterator instruction = m_frames[i].ip - 1;
+		DLG()->m_output.AppendFormat("[line %d] in ",
+			m_frames[i].function->m_chunk.getLine(instruction));
+		if (m_frames[i].function->m_name.empty()) 
+		{
+			DLG()->m_output.AppendFormat("script\r\n");
+		}
+		else 
+		{
+			DLG()->m_output.AppendFormat("%s()\r\n", m_frames[i].function->m_name.c_str());
+		}
+	}
 	m_stack.clear();
 }

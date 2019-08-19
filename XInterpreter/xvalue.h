@@ -33,6 +33,7 @@ struct Value
 
 	Value(const char* c, int len);
 	Value(const std::string& str);
+	Value(std::shared_ptr<ObjFunction> fun);
 	
 	Value(ColumnLength len, double* c);
 	Value(ColumnLength len);
@@ -53,7 +54,7 @@ struct Value
 	bool asBool() const { return static_cast<bool>(*this); }
 	double asDouble() const { return static_cast<double>(*this); }
 	const ObjColumn& asColumn() const { return static_cast<const ObjColumn&>(*this); }
-	const ObjFunction& asFunction() const { return static_cast<const ObjFunction&>(*this); }
+	std::shared_ptr<ObjFunction> asFunction(); 
 	const std::string& asString() const { return static_cast<const std::string&>(*this); }
 
 	ValueType type;

@@ -14,9 +14,15 @@ enum class InterpretResult
 
 struct CallFrame
 {
+	CallFrame(std::shared_ptr<ObjFunction> fun, XChunk::codeIterator insPtr, int stackSlot) :
+		function(fun),
+		ip(insPtr),
+		slots(stackSlot)
+	{}
+
 	std::shared_ptr<ObjFunction>	function;
 	XChunk::codeIterator			ip;		// instruction pointer
-	std::vector<Value>::iterator	slots;	// stack slot
+	int								slots;	// stack slot
 };
 
 // fw declaration
@@ -39,9 +45,22 @@ private:
 	InterpretResult negate();
 
 	inline const Value& peek(int distance) { return m_stack[m_stack.size() - 1 - distance]; }  	
-	inline void push(const Value& value) { m_stack.push_back(value); }
+	inline InterpretResult push(const Value& value) 
+	{
+		if (m_stack.size() == 255)
+		{
+			runtimeError("Stack overflow.");
+			return InterpretResult::RUNTIME_ERROR;
+		}
+		
+		m_stack.push_back(value);
+		return InterpretResult::OK;
+	}
 	inline Value pop() { Value value = m_stack.back(); m_stack.pop_back(); return value; }
-	void printValue(CString& out, Value value) const; 
+	bool callValue(Value callee, int argCount);
+	bool call(std::shared_ptr<ObjFunction> function, int argCount);
+
+	void printValue(CString& out, Value value) const;
 	void printObj(CString& out, Value value) const;
 
 	template<typename OP>

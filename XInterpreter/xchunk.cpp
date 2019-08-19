@@ -38,6 +38,8 @@ XChunk::codeIterator XChunk::disassembleInstruction(codeIterator it, bool trace)
 	{
 	case OpCode::CONSTANT:
 		return constantInstruction(out, "OP_CONSTANT", it);
+	case OpCode::NIL:
+		return simpleInstruction(out, "OP_NIL", it);
 	case OpCode::_TRUE:
 		return simpleInstruction(out, "OP_TRUE", it);
 	case OpCode::_FALSE:
@@ -84,6 +86,8 @@ XChunk::codeIterator XChunk::disassembleInstruction(codeIterator it, bool trace)
 		return jumpInstruction(out, "OP_JUMP_IF_FALSE", 1, it);
 	case OpCode::LOOP:
 		return jumpInstruction(out, "OP_LOOP", -1, it);
+	case OpCode::CALL:
+		return byteInstruction(out, "OP_CALL", it);
 	case OpCode::RETURN:
 		return simpleInstruction(out, "OP_RETURN", it);
 	default:

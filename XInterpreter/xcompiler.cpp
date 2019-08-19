@@ -11,7 +11,7 @@
 
 XCompiler::ParseRule XCompiler::rules[] =
 {
-{ &XCompiler::grouping,	nullptr,			Precedence::CALL },       // LEFT_PAREN      
+{ &XCompiler::grouping,	&XCompiler::call,	Precedence::CALL },       // LEFT_PAREN      
 { nullptr,				nullptr,			Precedence::NONE },       // RIGHT_PAREN     
 { nullptr,				nullptr,			Precedence::NONE },       // LEFT_BRACE
 { nullptr,				nullptr,			Precedence::NONE },       // RIGHT_BRACE     
@@ -40,7 +40,7 @@ XCompiler::ParseRule XCompiler::rules[] =
 { nullptr,				nullptr,			Precedence::NONE },       // FOR             
 { nullptr,				nullptr,			Precedence::NONE },       // FUN             
 { nullptr,				nullptr,			Precedence::NONE },       // IF              
-{ nullptr,				nullptr,			Precedence::NONE },       // NIL             
+{ &XCompiler::literal,	nullptr,			Precedence::NONE },       // NIL             
 { nullptr,				&XCompiler::or,		Precedence::OR },         // OR              
 { nullptr,				nullptr,			Precedence::NONE },       // PRINT           
 { nullptr,				nullptr,			Precedence::NONE },       // RETURN          
@@ -54,12 +54,12 @@ XCompiler::ParseRule XCompiler::rules[] =
 { nullptr,				nullptr,			Precedence::NONE },       // _EOF             
 };
 
-XCompiler::XCompiler(const char* source, FunctionType type) :
-	m_scanner(source),
+XCompiler::XCompiler(XScanner& scanner, std::string name, FunctionType type) :
+	m_scanner(scanner),
+	m_compilingFunction(std::make_shared<ObjFunction>(name, 0)),
 	m_type(type),
 	m_file(nullptr)
 {
-	m_compilingFunction = std::make_shared<ObjFunction>("", 0);
 	m_scopeDepth = 0;
 	XScanner::Token t{ TokenT::NIL, "", 0, 0 };
 	m_locals.emplace_back(t, 0);
@@ -116,7 +116,11 @@ void XCompiler::usingDeclaration()
 
 void XCompiler::declaration()
 {
-	if (m_scanner.match(TokenT::VAR)) 
+	if (m_scanner.match(TokenT::FUN))
+	{
+		funDeclaration();
+	}
+	else if (m_scanner.match(TokenT::VAR)) 
 	{
 		varDeclaration();
 	}
@@ -124,6 +128,47 @@ void XCompiler::declaration()
 	{
 		statement();
 	}
+}
+
+void XCompiler::function(FunctionType type) 
+{
+	XCompiler compiler(m_scanner, std::string(m_scanner.previous().start, m_scanner.previous().length), type);
+	compiler.beginScope();
+
+	// Compile the parameter list.                                
+	m_scanner.consume(TokenT::LEFT_PAREN, "Expect '(' after function name.");
+	if (!m_scanner.check(TokenT::RIGHT_PAREN)) 
+	{
+		do 
+		{
+			compiler.m_compilingFunction->m_arity++;
+			if (compiler.m_compilingFunction->m_arity > 255) 
+			{
+				m_scanner.errorAtCurrent("Cannot have more than 255 parameters.");
+			}
+
+			uint8_t paramConstant = compiler.parseVariable("Expect parameter name.");
+			compiler.defineVariable(paramConstant);
+		} while (m_scanner.match(TokenT::COMMA));
+	}
+	m_scanner.consume(TokenT::RIGHT_PAREN, "Expect ')' after parameters.");
+
+	// The body.                                                  
+	m_scanner.consume(TokenT::LEFT_BRACE, "Expect '{' before function body.");
+	compiler.block();
+
+	// Create the function object.                                
+	compiler.endCompiler();
+	if (!m_scanner.hadError())
+		return emitInstruction(OpCode::CONSTANT, makeConstant(compiler.m_compilingFunction));
+}
+
+void XCompiler::funDeclaration()
+{
+	uint8_t global = parseVariable("Expect function name.");
+	markInitialized();
+	function(FunctionType::FUNCTION);
+	defineVariable(global);
 }
 
 void XCompiler::varDeclaration() 
@@ -284,7 +329,7 @@ void XCompiler::block()
 	while (!m_scanner.check(TokenT::RIGHT_BRACE) && 
 		   !m_scanner.check(TokenT::_EOF)) 
 	{
-		declaration();
+		usingDeclaration();
 	}
 
 	m_scanner.consume(TokenT::RIGHT_BRACE, "Expect '}' after block.");
@@ -393,6 +438,12 @@ void XCompiler::binary()
 	}
 }
 
+void XCompiler::call()
+{
+	uint8_t argCount = argumentList();
+	emitInstruction(OpCode::CALL, argCount);
+}
+
 void XCompiler::and() 
 {
 	int endJump = emitJump(OpCode::JUMP_IF_FALSE);
@@ -419,6 +470,7 @@ void XCompiler::literal(bool /*canAssign*/)
 {
 	switch (m_scanner.previous().type) {
 	case TokenT::_FALSE: emitInstruction(OpCode::_FALSE); break;
+	case TokenT::NIL: emitInstruction(OpCode::NIL); break;
 	case TokenT::_TRUE: emitInstruction(OpCode::_TRUE); break;
 	default:
 		return; // Unreachable.                   
@@ -443,7 +495,8 @@ void XCompiler::parsePrecedence(Precedence precedence)
 	{
 		m_scanner.advanceToken();
 		const ParseRule& infixRule = getRule(m_scanner.previous().type);
-		(this->*infixRule.infix)();
+		if (infixRule.infix != nullptr)
+			(this->*infixRule.infix)();
 	}
 
 	if (canAssign && m_scanner.match(TokenT::EQUAL))
@@ -489,15 +542,40 @@ void XCompiler::declareVariable()
 	m_locals.emplace_back(m_scanner.previous(), -1);
 }
 
+void XCompiler::markInitialized()
+{
+	m_locals.back().depth = m_scopeDepth;
+}
+
 void XCompiler::defineVariable(uint8_t global) 
 { 
 	if (m_scopeDepth > 0) 
 	{
-		m_locals.back().depth = m_scopeDepth;
+		markInitialized();
 		return;
 	}    
 
 	emitInstruction(OpCode::DEFINE_GLOBAL, global);
+}
+
+uint8_t XCompiler::argumentList() 
+{
+	uint8_t argCount = 0;
+	if (!m_scanner.check(TokenT::RIGHT_PAREN)) 
+	{
+		do 
+		{
+			expression();
+			if (argCount == 255) 
+			{
+				error("Cannot have more than 255 arguments.");
+			} 
+			argCount++;
+		} while (m_scanner.match(TokenT::COMMA));
+	}
+
+	m_scanner.consume(TokenT::RIGHT_PAREN, "Expect ')' after arguments.");
+	return argCount;
 }
 
 uint8_t XCompiler::makeConstant(const Value& value) 

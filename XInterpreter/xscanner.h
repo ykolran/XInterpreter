@@ -27,9 +27,9 @@ public:
 	bool panicMode() const { return m_panicMode; }
 
 	void errorAt(const XScanner::Token& token, const char* message);
+	void errorAtCurrent(const char* message) { errorAt(m_currentToken, message); }
 
 private:
-	void errorAtCurrent(const char* message) { errorAt(m_currentToken, message); }
 
 	inline bool isAtEnd() const { return *m_current == '\0'; }
 	inline char advance() { m_current++; return m_current[-1]; }

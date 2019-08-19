@@ -20,7 +20,7 @@ enum class FunctionType
 class XCompiler
 {
 public:
-	XCompiler(const char* source, FunctionType type);
+	XCompiler(XScanner& scanner, std::string name, FunctionType type);
 	std::shared_ptr<ObjFunction> compile();
 
 private:
@@ -51,6 +51,8 @@ private:
 
 	void usingDeclaration();
 	void declaration();
+	void funDeclaration();
+	void function(FunctionType type);
 	void varDeclaration();
 	void statement();
 	void printStatement();
@@ -64,6 +66,7 @@ private:
 	void grouping(bool canAssign);
 	void unary(bool canAssign);
 	void binary();
+	void call();
 	void and();
 	void or();
 
@@ -76,7 +79,9 @@ private:
 	uint8_t identifierConstant(const XScanner::Token& name) { return makeConstant(Value(name.start, name.length)); } 	
 	uint8_t parseVariable(const char* errorMessage);
 	void declareVariable();
+	void markInitialized();
 	void defineVariable(uint8_t global);
+	uint8_t argumentList();
 	const ParseRule& getRule(TokenT type) const { return rules[static_cast<size_t>(type)]; }
 
 	void emitByte(uint8_t byte) { chunk().write(byte, m_scanner.previous().line); }
@@ -90,14 +95,14 @@ private:
 	void endCompiler();
 	void beginScope() { m_scopeDepth++;	}
 	void endScope();
-	void emitReturn() { emitInstruction(OpCode::RETURN); };
+	void emitReturn() { emitInstruction(OpCode::NIL); emitInstruction(OpCode::RETURN); };
 	uint8_t makeConstant(const Value& value);
 
 	void error(const char* message) { m_scanner.errorAt(m_scanner.previous(), message); }
 	bool identifiersEqual(const XScanner::Token& a, const XScanner::Token& b) const;
 	int resolveLocal(const XScanner::Token& name);
 
-	XScanner m_scanner;
+	XScanner& m_scanner;
 	std::shared_ptr<ObjFunction> m_compilingFunction;
 	FunctionType m_type;
 
