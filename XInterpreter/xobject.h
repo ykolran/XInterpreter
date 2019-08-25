@@ -11,6 +11,7 @@ struct Obj
 	bool isString() const { return type == ObjType::STRING; }
 	bool isColumn() const { return type == ObjType::SHARED_COLUMN || type == ObjType::OWNING_COLUMN; }
 	bool isFunction() const { return type == ObjType::FUNCTION; }
+	bool isNative() const { return type == ObjType::NATIVE; }
 
 	ObjType type;
 };
@@ -66,4 +67,21 @@ struct ObjFunction : public Obj
 	std::string m_name;
 	int m_arity;
 	XChunk m_chunk;
+};
+
+struct ObjNative : public Obj
+{
+	ObjNative(std::string name, int arity) :
+		Obj(ObjType::NATIVE),
+		m_name(name),
+		m_arity(arity),
+		m_success(false)
+	{
+	}
+
+	virtual double operator()(std::vector<double>) = 0;
+	std::string m_name;
+	std::string m_error;
+	int m_arity;
+	bool m_success;
 };

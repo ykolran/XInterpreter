@@ -31,6 +31,7 @@ class CLogDataFile;
 class XVM
 {
 public:
+	XVM();
 	InterpretResult interpret(const char* source);
 private:
 	InterpretResult run();
@@ -57,8 +58,9 @@ private:
 		return InterpretResult::OK;
 	}
 	inline Value pop() { Value value = m_stack.back(); m_stack.pop_back(); return value; }
-	bool callValue(Value callee, int argCount);
-	bool call(std::shared_ptr<ObjFunction> function, int argCount);
+	InterpretResult callValue(Value callee, int argCount);
+	InterpretResult call(std::shared_ptr<ObjFunction> function, int argCount);
+	InterpretResult call(std::shared_ptr<ObjNative> function, int argCount);
 
 	void printValue(CString& out, Value value) const;
 	void printObj(CString& out, Value value) const;
@@ -67,6 +69,7 @@ private:
 	InterpretResult binaryOp(OP op);
 
 	void runtimeError(const char* format, ...);
+	void defineNative(const std::string& name, std::shared_ptr<ObjNative> native);
 
 	std::vector<Value> m_stack;
 	std::vector<CallFrame> m_frames;

@@ -20,6 +20,12 @@ Value::Value(std::shared_ptr<ObjFunction> fun) :
 {
 }
 
+Value::Value(std::shared_ptr<ObjNative> fun) :
+	type(ValueType::OBJ),
+	obj(fun)
+{}
+	
+
 Value::Value(ColumnLength len, double* c) : 
 	type(ValueType::OBJ), 
 	obj(new ObjColumn(len, c)) 
@@ -32,14 +38,24 @@ Value::Value(ColumnLength len) :
 {
 }
 
-Value::operator const ObjColumn&() const 
+Value::operator ObjColumn&()
 { 
-	return static_cast<const ObjColumn&>(*obj.get()); 
+	return static_cast<ObjColumn&>(*obj.get()); 
+}
+
+Value::operator const ObjColumn&() const
+{
+	return static_cast<const ObjColumn&>(*obj.get());
 }
 
 Value::operator const ObjFunction&() const
 {
 	return static_cast<const ObjFunction&>(*obj.get());
+}
+
+Value::operator const ObjNative&() const
+{
+	return static_cast<const ObjNative&>(*obj.get());
 }
 
 Value::operator const std::string&() const
@@ -62,7 +78,17 @@ bool Value::isFunction() const
 	return isObj() && obj->isFunction();
 }
 
-std::shared_ptr<ObjFunction> Value::asFunction()
+bool Value::isNative() const
+{
+	return isObj() && obj->isNative();
+}
+
+std::shared_ptr<ObjNative> Value::asNative()
 { 
-	return std::static_pointer_cast<ObjFunction>(obj); 
+	return std::static_pointer_cast<ObjNative>(obj); 
+}
+
+std::shared_ptr<ObjFunction> Value::asFunction()
+{
+	return std::static_pointer_cast<ObjFunction>(obj);
 }

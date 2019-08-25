@@ -4,6 +4,39 @@
 #include "xcompiler.h"
 #include "xobject.h"
 #include <algorithm>
+#include <time.h>
+
+struct ClockNative : public ObjNative
+{
+	ClockNative() : ObjNative("clock", 0)
+	{
+	}
+
+	virtual double operator()(std::vector<double>)
+	{
+		m_success = true;
+		return (double)clock() / CLOCKS_PER_SEC;
+	}
+};
+
+struct RMS : public ObjNative
+{
+	RMS() : ObjNative("rms", 3)
+	{
+	}
+
+	virtual double operator()(std::vector<double> in)
+	{
+		m_success = true;
+		return sqrt(in[0]* in[0] + in[1] * in[1] + in[2] * in[2]);
+	}
+};
+
+XVM::XVM()
+{
+	defineNative("clock", std::make_shared<ClockNative>());
+	defineNative("rms", std::make_shared<RMS>());
+}
 
 InterpretResult XVM::interpret(const char* source) 
 {
@@ -264,10 +297,7 @@ InterpretResult XVM::run()
 		case OpCode::CALL:
 		{
 			int argCount = readByte();
-			if (!callValue(peek(argCount), argCount))
-			{
-				return InterpretResult::RUNTIME_ERROR;
-			}
+			result = callValue(peek(argCount), argCount);
 			break;
 		}
 		case OpCode::RETURN:
@@ -311,6 +341,9 @@ void XVM::printObj(CString& out, Value value) const
 		else
 			out.AppendFormat("<fn %s>", value.asFunction()->m_name.c_str());
 		break;
+	case ObjType::NATIVE:
+		out.AppendFormat("<ntv %s>", value.asNative()->m_name.c_str());
+		break;
 	case ObjType::STRING: 
 		out.Append(value.asString().c_str());
 		break;
@@ -324,7 +357,7 @@ void XVM::printObj(CString& out, Value value) const
 	}
 }
 
-bool XVM::callValue(Value callee, int argCount) 
+InterpretResult XVM::callValue(Value callee, int argCount)
 {
 	if (callee.isObj()) 
 	{
@@ -333,27 +366,117 @@ bool XVM::callValue(Value callee, int argCount)
 		case ObjType::FUNCTION:
 			return call(callee.asFunction(), argCount);
 
+		case ObjType::NATIVE:
+			return call(callee.asNative(), argCount);
+
 		default:
 			// Non-callable object type.                   
 			break;
 		}
 	}
 
-	runtimeError("Can only call functions and classes.");
-	return false;
+	runtimeError("Can only call functions.");
+	return InterpretResult::RUNTIME_ERROR;
 }
 
-bool XVM::call(std::shared_ptr<ObjFunction> function, int argCount)
+InterpretResult XVM::call(std::shared_ptr<ObjFunction> function, int argCount)
 {
 	if (argCount != function->m_arity) 
 	{
-		runtimeError("Expected %d arguments but got %d.",
-			function->m_arity, argCount);
-		return false;
+		runtimeError("Function %s expects %d arguments but got %d.",
+			function->m_name.c_str(), function->m_arity, argCount);
+		return InterpretResult::RUNTIME_ERROR;
 	}
 
 	m_frames.emplace_back(function, function->m_chunk.begin(), m_stack.end() - m_stack.begin() - argCount - 1);
-	return true;
+	return InterpretResult::OK;
+}
+
+InterpretResult XVM::call(std::shared_ptr<ObjNative> function, int argCount)
+{
+	if (argCount != function->m_arity) 
+	{
+		runtimeError("Function %s expects %d arguments but got %d.",
+			function->m_name.c_str(), function->m_arity, argCount);
+		return InterpretResult::RUNTIME_ERROR;
+	}
+
+	if (argCount > 0)
+	{
+		auto begin = m_stack.end() - argCount;
+		if (begin->isColumn())
+		{
+			int len = begin->asColumn().length;
+			for (auto i = begin + 1; i != m_stack.end(); ++i)
+				if (!i->isColumn())
+				{
+					runtimeError("All parameters should be of the same type.");
+					return InterpretResult::RUNTIME_ERROR;
+				}
+				else if (i->asColumn().length != len)
+				{
+					runtimeError("All column parameters should be of the same length.");
+					return InterpretResult::RUNTIME_ERROR;
+				}
+
+			Value ret(ColumnLength{ len });
+			for (int i = 0; i < len; i++)
+			{
+				std::vector<double> args;
+				for (auto j = begin; j != m_stack.end(); ++j)
+					args.push_back(j->asColumn().data[i]);
+
+				ret.asColumn().data[i] = (*function)(args);
+				if (!function->m_success)
+				{
+					runtimeError("Runtime error calling native function %s, on element %d of column: %s",
+						function->m_name.c_str(), i, function->m_error.c_str());
+					return InterpretResult::RUNTIME_ERROR;
+				}
+			}
+			m_stack.erase(m_stack.end() - argCount - 1, m_stack.end());
+			return push(ret);
+		}
+		else if (begin->isNumber())
+		{
+			for (auto i = begin + 1; i != m_stack.end(); ++i)
+				if (!i->isNumber())
+				{
+					runtimeError("All parameters should be of the same type.");
+					return InterpretResult::RUNTIME_ERROR;
+				}
+
+			std::vector<double> args(m_stack.end() - argCount, m_stack.end());
+			Value result = (*function)(args);
+			m_stack.erase(m_stack.end() - argCount - 1, m_stack.end());
+			if (function->m_success)
+				return push(result);
+			else
+			{
+				runtimeError("Runtime error calling native function %s: %s",
+					function->m_name.c_str(), function->m_error.c_str());
+				return InterpretResult::RUNTIME_ERROR;
+			}
+		}
+		else
+		{
+			runtimeError("Parameters to native function should be numbers or columns.");
+			return InterpretResult::RUNTIME_ERROR;
+		}
+	}
+	else
+	{
+		Value result = (*function)(std::vector<double>());
+		m_stack.erase(m_stack.end() - argCount - 1, m_stack.end());
+		if (function->m_success)
+			return push(result);
+		else
+		{
+			runtimeError("Runtime error calling native function %s: %s",
+				function->m_name.c_str(), function->m_error.c_str());
+			return InterpretResult::RUNTIME_ERROR;
+		}
+	}
 }
 
 void XVM::printValue(CString& out, Value value) const
@@ -401,4 +524,9 @@ void XVM::runtimeError(const char* format, ...)
 		}
 	}
 	m_stack.clear();
+}
+
+void XVM::defineNative(const std::string& name, std::shared_ptr<ObjNative> native)
+{
+	globals.emplace(name, native);
 }
