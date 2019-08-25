@@ -1,7 +1,8 @@
 #include "stdafx.h"
-#include "xchunk.h"
+#include "XChunk.h"
 #include "XInterpreterDlg.h"
-#include "xobject.h"
+#include "XObject.h"
+#include "XOpCode.h"
 
 int XChunk::addConstant(const Value& value) 
 {
@@ -33,62 +34,62 @@ XChunk::codeIterator XChunk::disassembleInstruction(codeIterator it, bool trace)
 		out.AppendFormat("%4d ", lines[offset]);
 	}
 
-	OpCode instruction = static_cast<OpCode>(*it);
+	XOpCode instruction = static_cast<XOpCode>(*it);
 	switch (instruction)
 	{
-	case OpCode::CONSTANT:
+	case XOpCode::CONSTANT:
 		return constantInstruction(out, "OP_CONSTANT", it);
-	case OpCode::NIL:
+	case XOpCode::NIL:
 		return simpleInstruction(out, "OP_NIL", it);
-	case OpCode::_TRUE:
+	case XOpCode::_TRUE:
 		return simpleInstruction(out, "OP_TRUE", it);
-	case OpCode::_FALSE:
+	case XOpCode::_FALSE:
 		return simpleInstruction(out, "OP_FALSE", it);
-	case OpCode::POP:
+	case XOpCode::POP:
 		return simpleInstruction(out, "OP_POP", it);
-	case OpCode::GET_LOCAL:
+	case XOpCode::GET_LOCAL:
 		return byteInstruction(out, "OP_GET_LOCAL", it);
-	case OpCode::SET_LOCAL:
+	case XOpCode::SET_LOCAL:
 		return byteInstruction(out, "OP_SET_LOCAL", it);	
-	case OpCode::GET_GLOBAL:
+	case XOpCode::GET_GLOBAL:
 		return constantInstruction(out, "OP_GET_GLOBAL", it);
-	case OpCode::DEFINE_GLOBAL:
+	case XOpCode::DEFINE_GLOBAL:
 		return constantInstruction(out, "OP_DEFINE_GLOBAL", it);
-	case OpCode::SET_GLOBAL:
+	case XOpCode::SET_GLOBAL:
 		return constantInstruction(out, "OP_SET_GLOBAL", it);
-	case OpCode::FILE:
+	case XOpCode::FILE:
 		return fileInstruction(out, "OP_FILE", it);
-	case OpCode::GET_COLUMN:
+	case XOpCode::GET_COLUMN:
 		return byteInstruction(out, "OP_GET_COLUMN", it);
-	case OpCode::EQUAL:
+	case XOpCode::EQUAL:
 		return simpleInstruction(out, "OP_EQUAL", it);
-	case OpCode::GREATER:
+	case XOpCode::GREATER:
 		return simpleInstruction(out, "OP_GREATER", it);
-	case OpCode::LESS:
+	case XOpCode::LESS:
 		return simpleInstruction(out, "OP_LESS", it);
-	case OpCode::ADD:
+	case XOpCode::ADD:
 		return simpleInstruction(out, "OP_ADD", it);
-	case OpCode::SUBTRACT:
+	case XOpCode::SUBTRACT:
 		return simpleInstruction(out, "OP_SUBTRACT", it);
-	case OpCode::MULTIPLY:
+	case XOpCode::MULTIPLY:
 		return simpleInstruction(out, "OP_MULTIPLY", it);
-	case OpCode::DIVIDE:
+	case XOpCode::DIVIDE:
 		return simpleInstruction(out, "OP_DIVIDE", it);
-	case OpCode::NOT:
+	case XOpCode::NOT:
 		return simpleInstruction(out, "OP_NOT", it);
-	case OpCode::NEGATE:
+	case XOpCode::NEGATE:
 		return simpleInstruction(out, "OP_NEGATE", it);
-	case OpCode::PRINT:
+	case XOpCode::PRINT:
 		return simpleInstruction(out, "OP_PRINT", it);
-	case OpCode::JUMP:
+	case XOpCode::JUMP:
 		return jumpInstruction(out, "OP_JUMP", 1, it);
-	case OpCode::JUMP_IF_FALSE:
+	case XOpCode::JUMP_IF_FALSE:
 		return jumpInstruction(out, "OP_JUMP_IF_FALSE", 1, it);
-	case OpCode::LOOP:
+	case XOpCode::LOOP:
 		return jumpInstruction(out, "OP_LOOP", -1, it);
-	case OpCode::CALL:
+	case XOpCode::CALL:
 		return byteInstruction(out, "OP_CALL", it);
-	case OpCode::RETURN:
+	case XOpCode::RETURN:
 		return simpleInstruction(out, "OP_RETURN", it);
 	default:
 		out.AppendFormat("Unknown opcode %d\r\n", instruction);

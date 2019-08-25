@@ -1,42 +1,10 @@
 #pragma once
 
-#include <stdint.h>
 #include <vector>
 #include "xvalue.h"
 
 #define DEBUG_TRACE_EXECUTION
 #define DEBUG_PRINT_CODE
-
-enum class OpCode : uint8_t
-{
-	CONSTANT,
-	NIL,
-	_TRUE,
-	_FALSE,
-	POP,
-	GET_LOCAL,
-	SET_LOCAL,
-	GET_GLOBAL,
-	DEFINE_GLOBAL,
-	SET_GLOBAL,
-	FILE,
-	GET_COLUMN,
-	EQUAL,
-	GREATER,
-	LESS,
-	ADD,
-	SUBTRACT,
-	MULTIPLY,
-	DIVIDE, 
-	NOT,
-	NEGATE,
-	PRINT,
-	JUMP,
-	JUMP_IF_FALSE,
-	LOOP,
-	CALL,
-	RETURN
-};
 
 class XChunk
 {

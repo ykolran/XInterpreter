@@ -33,52 +33,31 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TokenType.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Token.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Scanner.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Expr.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AstPrinter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Parser.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Interpreter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Stmt.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Environment.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="xvm.h">
-      <Filter>XVM</Filter>
-    </ClInclude>
-    <ClInclude Include="xcompiler.h">
-      <Filter>XVM</Filter>
-    </ClInclude>
-    <ClInclude Include="xchunk.h">
-      <Filter>XVM</Filter>
-    </ClInclude>
-    <ClInclude Include="xscanner.h">
-      <Filter>XVM</Filter>
-    </ClInclude>
-    <ClInclude Include="xvalue.h">
-      <Filter>XVM</Filter>
-    </ClInclude>
     <ClInclude Include="CLogDataFile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="xobject.h">
+    <ClInclude Include="XOpCode.h">
+      <Filter>XVM</Filter>
+    </ClInclude>
+    <ClInclude Include="XToken.h">
+      <Filter>XVM</Filter>
+    </ClInclude>
+    <ClInclude Include="XChunk.h">
+      <Filter>XVM</Filter>
+    </ClInclude>
+    <ClInclude Include="XCompiler.h">
+      <Filter>XVM</Filter>
+    </ClInclude>
+    <ClInclude Include="XObject.h">
+      <Filter>XVM</Filter>
+    </ClInclude>
+    <ClInclude Include="XScanner.h">
+      <Filter>XVM</Filter>
+    </ClInclude>
+    <ClInclude Include="XValue.h">
+      <Filter>XVM</Filter>
+    </ClInclude>
+    <ClInclude Include="XVM.h">
       <Filter>XVM</Filter>
     </ClInclude>
   </ItemGroup>
@@ -92,25 +71,19 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Token.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Scanner.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="xvm.cpp">
+    <ClCompile Include="XChunk.cpp">
       <Filter>XVM</Filter>
     </ClCompile>
-    <ClCompile Include="xchunk.cpp">
+    <ClCompile Include="XCompiler.cpp">
       <Filter>XVM</Filter>
     </ClCompile>
-    <ClCompile Include="xcompiler.cpp">
+    <ClCompile Include="XScanner.cpp">
       <Filter>XVM</Filter>
     </ClCompile>
-    <ClCompile Include="xscanner.cpp">
+    <ClCompile Include="XValue.cpp">
       <Filter>XVM</Filter>
     </ClCompile>
-    <ClCompile Include="xvalue.cpp">
+    <ClCompile Include="XVM.cpp">
       <Filter>XVM</Filter>
     </ClCompile>
   </ItemGroup>
@@ -131,7 +104,7 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="xgrammer.txt">
+    <Text Include="XGrammer.txt">
       <Filter>XVM</Filter>
     </Text>
   </ItemGroup>

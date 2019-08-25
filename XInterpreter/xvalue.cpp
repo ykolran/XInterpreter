@@ -1,6 +1,6 @@
 #include "stdafx.h"
-#include "xvalue.h"
-#include "xobject.h"
+#include "XValue.h"
+#include "XObject.h"
 
 Value::Value(const char* c, int len) : 
 	type(ValueType::OBJ), 

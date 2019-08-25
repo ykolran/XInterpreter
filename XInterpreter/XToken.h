@@ -1,6 +1,6 @@
 #pragma once
 
-enum class TokenT {
+enum class XToken {
 	// Single-character tokens.                      
 	LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
 	COMMA, DOT, MINUS, PLUS, SEMICOLON, SLASH, STAR,
@@ -21,4 +21,12 @@ enum class TokenT {
 
 	_ERROR,
 	_EOF
+};
+
+struct XTokenData
+{
+	XToken type;
+	const char* start;
+	int length;
+	int line;
 };

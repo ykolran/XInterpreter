@@ -1,6 +1,7 @@
 #pragma once
-#include "xchunk.h"
-#include "xobject.h"
+#include "XChunk.h"
+#include "XObject.h"
+#include "XOpCode.h"
 #include <vector>
 #include <unordered_map>
 #include <string>
@@ -37,7 +38,7 @@ private:
 	InterpretResult run();
 	XChunk::codeIterator& ip() { return m_frames.back().ip; }
 	XChunk& chunk() { return m_frames.back().function->m_chunk; }
-	inline OpCode readOpCode() { return static_cast<OpCode>(*ip()++); }
+	inline XOpCode readOpCode() { return static_cast<XOpCode>(*ip()++); }
 	inline uint8_t readByte() { return *ip()++; }
 	inline uint16_t readShort() { ip() += 2;  return static_cast<uint16_t>((ip()[-2] << 8) | ip()[-1]); }
 

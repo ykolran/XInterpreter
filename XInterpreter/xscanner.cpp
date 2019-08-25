@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "xscanner.h"
+#include "XScanner.h"
 #include "XInterpreterDlg.h"
 
 XScanner::XScanner(const char* source)
@@ -11,14 +11,14 @@ XScanner::XScanner(const char* source)
 	m_panicMode = false;
 }
 
-XScanner::Token XScanner::scanToken()
+XTokenData XScanner::scanToken()
 {
 	skipWhitespace();
 
 	m_start = m_current;
 
 	if (isAtEnd()) 
-		return makeToken(TokenT::_EOF);
+		return makeToken(XToken::_EOF);
 
 	char c = advance();
 
@@ -26,37 +26,37 @@ XScanner::Token XScanner::scanToken()
 	if (isDigit(c)) return number();
 
 	switch (c) {
-	case '(': return makeToken(TokenT::LEFT_PAREN);
-	case ')': return makeToken(TokenT::RIGHT_PAREN);
-	case '{': return makeToken(TokenT::LEFT_BRACE);
-	case '}': return makeToken(TokenT::RIGHT_BRACE);
-	case ';': return makeToken(TokenT::SEMICOLON);
-	case ',': return makeToken(TokenT::COMMA);
-	case '.': return makeToken(TokenT::DOT);
-	case '-': return makeToken(TokenT::MINUS);
-	case '+': return makeToken(TokenT::PLUS);
-	case '/': return makeToken(TokenT::SLASH);
-	case '*': return makeToken(TokenT::STAR);
+	case '(': return makeToken(XToken::LEFT_PAREN);
+	case ')': return makeToken(XToken::RIGHT_PAREN);
+	case '{': return makeToken(XToken::LEFT_BRACE);
+	case '}': return makeToken(XToken::RIGHT_BRACE);
+	case ';': return makeToken(XToken::SEMICOLON);
+	case ',': return makeToken(XToken::COMMA);
+	case '.': return makeToken(XToken::DOT);
+	case '-': return makeToken(XToken::MINUS);
+	case '+': return makeToken(XToken::PLUS);
+	case '/': return makeToken(XToken::SLASH);
+	case '*': return makeToken(XToken::STAR);
 	case '!':
-		return makeToken(match('=') ? TokenT::BANG_EQUAL : TokenT::BANG);
+		return makeToken(match('=') ? XToken::BANG_EQUAL : XToken::BANG);
 	case '=':
-		return makeToken(match('=') ? TokenT::EQUAL_EQUAL : TokenT::EQUAL);
+		return makeToken(match('=') ? XToken::EQUAL_EQUAL : XToken::EQUAL);
 	case '<':
-		return makeToken(match('=') ? TokenT::LESS_EQUAL : TokenT::LESS);
+		return makeToken(match('=') ? XToken::LESS_EQUAL : XToken::LESS);
 	case '>':
 		return makeToken(match('=') ?
-			TokenT::GREATER_EQUAL : TokenT::GREATER);
+			XToken::GREATER_EQUAL : XToken::GREATER);
 	case '"': return stringToken();
-	case '&': if (match('&')) return makeToken(TokenT::AND); else break;
-	case '|': if (match('|')) return makeToken(TokenT::OR); else break;
+	case '&': if (match('&')) return makeToken(XToken::AND); else break;
+	case '|': if (match('|')) return makeToken(XToken::OR); else break;
 	}
 
 	return errorToken("Unexpected character.");
 }
 
-XScanner::Token XScanner::makeToken(TokenT type)
+XTokenData XScanner::makeToken(XToken type)
 {
-	Token token;
+	XTokenData token;
 	token.type = type;
 	token.start = m_start;
 	token.length = (int)(m_current - m_start);
@@ -65,10 +65,10 @@ XScanner::Token XScanner::makeToken(TokenT type)
 	return token;
 }
 
-XScanner::Token XScanner::errorToken(const char* message)
+XTokenData XScanner::errorToken(const char* message)
 {
-	Token token;
-	token.type = TokenT::_ERROR;
+	XTokenData token;
+	token.type = XToken::_ERROR;
 	token.start = message;
 	token.length = (int)strlen(message);
 	token.line = m_line;
@@ -114,7 +114,7 @@ void XScanner::skipWhitespace()
 	}
 }
 
-XScanner::Token XScanner::stringToken()
+XTokenData XScanner::stringToken()
 {
 	while (peek() != '"' && !isAtEnd()) {
 		if (peek() == '\n') m_line++;
@@ -125,10 +125,10 @@ XScanner::Token XScanner::stringToken()
 
 	// The closing ".                                        
 	advance();
-	return makeToken(TokenT::STRING);
+	return makeToken(XToken::STRING);
 }
 
-XScanner::Token XScanner::number()
+XTokenData XScanner::number()
 {
 	while (isDigit(peek())) 
 		advance();
@@ -163,67 +163,67 @@ XScanner::Token XScanner::number()
 		}
 	}
 
-	return makeToken(TokenT::NUMBER);
+	return makeToken(XToken::NUMBER);
 }
 
-XScanner::Token XScanner::identifier()
+XTokenData XScanner::identifier()
 {
 	while (isAlpha(peek()) || isDigit(peek())) advance();
 
 	return makeToken(identifierType());
 }
 
-TokenT XScanner::identifierType()
+XToken XScanner::identifierType()
 {
 	switch (m_start[0]) {
-	case 'a': return checkKeyword(1, "nd", TokenT::AND);
-	case 'c': return checkKeyword(1, "lass", TokenT::CLASS);
-	case 'e': return checkKeyword(1, "lse", TokenT::ELSE);
+	case 'a': return checkKeyword(1, "nd", XToken::AND);
+	case 'c': return checkKeyword(1, "lass", XToken::CLASS);
+	case 'e': return checkKeyword(1, "lse", XToken::ELSE);
 	case 'f':
 		if (m_current - m_start > 1)
 		{
 			switch (m_start[1])
 			{
-			case 'a': return checkKeyword(2, "lse", TokenT::_FALSE);
-			case 'o': return checkKeyword(2, "r", TokenT::FOR);
-			case 'u': return checkKeyword(2, "n", TokenT::FUN);
+			case 'a': return checkKeyword(2, "lse", XToken::_FALSE);
+			case 'o': return checkKeyword(2, "r", XToken::FOR);
+			case 'u': return checkKeyword(2, "n", XToken::FUN);
 			}
 		}
 		break;
-	case 'i': return checkKeyword(1, "f", TokenT::IF);
-	case 'n': return checkKeyword(1, "il", TokenT::NIL);
-	case 'o': return checkKeyword(1, "r", TokenT::OR);
-	case 'p': return checkKeyword(1, "rint", TokenT::PRINT);
-	case 'r': return checkKeyword(1, "eturn", TokenT::RETURN);
-	case 's': return checkKeyword(1, "uper", TokenT::SUPER);
+	case 'i': return checkKeyword(1, "f", XToken::IF);
+	case 'n': return checkKeyword(1, "il", XToken::NIL);
+	case 'o': return checkKeyword(1, "r", XToken::OR);
+	case 'p': return checkKeyword(1, "rint", XToken::PRINT);
+	case 'r': return checkKeyword(1, "eturn", XToken::RETURN);
+	case 's': return checkKeyword(1, "uper", XToken::SUPER);
 	case 't':
 		if (m_current - m_start > 1) {
 			switch (m_start[1]) {
-			case 'h': return checkKeyword(2, "is", TokenT::_THIS);
-			case 'r': return checkKeyword(2, "ue", TokenT::_TRUE);
+			case 'h': return checkKeyword(2, "is", XToken::_THIS);
+			case 'r': return checkKeyword(2, "ue", XToken::_TRUE);
 			}
 		}
 		break;
-	case 'u': return checkKeyword(1, "sing", TokenT::USING);
-	case 'v': return checkKeyword(1, "ar", TokenT::VAR);
-	case 'w': return checkKeyword(1, "hile", TokenT::WHILE);
+	case 'u': return checkKeyword(1, "sing", XToken::USING);
+	case 'v': return checkKeyword(1, "ar", XToken::VAR);
+	case 'w': return checkKeyword(1, "hile", XToken::WHILE);
 	}
 
-	return TokenT::IDENTIFIER;
+	return XToken::IDENTIFIER;
 }
 
-void XScanner::errorAt(const Token& token, const char* message)
+void XScanner::errorAt(const XTokenData& token, const char* message)
 {
 	if (m_panicMode) return;
 	m_panicMode = true;
 
 	DLG()->m_output.AppendFormat("[line %d] Error", token.line);
 
-	if (token.type == TokenT::_EOF)
+	if (token.type == XToken::_EOF)
 	{
 		DLG()->m_output.AppendFormat(" at end");
 	}
-	else if (token.type == TokenT::_ERROR)
+	else if (token.type == XToken::_ERROR)
 	{
 		// Nothing.                                                
 	}
@@ -240,21 +240,21 @@ void XScanner::synchronize()
 {
 	m_panicMode = false;
 
-	while (m_currentToken.type != TokenT::_EOF)
+	while (m_currentToken.type != XToken::_EOF)
 	{
-		if (m_previousToken.type == TokenT::SEMICOLON)
+		if (m_previousToken.type == XToken::SEMICOLON)
 			return;
 
 		switch (m_currentToken.type) {
-		case TokenT::CLASS:
-		case TokenT::FUN:
-		case TokenT::VAR:
-		case TokenT::USING:
-		case TokenT::FOR:
-		case TokenT::IF:
-		case TokenT::WHILE:
-		case TokenT::PRINT:
-		case TokenT::RETURN:
+		case XToken::CLASS:
+		case XToken::FUN:
+		case XToken::VAR:
+		case XToken::USING:
+		case XToken::FOR:
+		case XToken::IF:
+		case XToken::WHILE:
+		case XToken::PRINT:
+		case XToken::RETURN:
 			return;
 
 		default:
@@ -272,13 +272,13 @@ void XScanner::advanceToken()
 
 	for (;;) {
 		m_currentToken = scanToken();
-		if (m_currentToken.type != TokenT::_ERROR) break;
+		if (m_currentToken.type != XToken::_ERROR) break;
 
 		errorAtCurrent(m_currentToken.start);
 	}
 }
 
-void XScanner::consume(TokenT type, const char* message)
+void XScanner::consume(XToken type, const char* message)
 {
 	if (m_currentToken.type == type)
 	{
@@ -289,7 +289,7 @@ void XScanner::consume(TokenT type, const char* message)
 	errorAtCurrent(message);
 }
 
-bool XScanner::match(TokenT type)
+bool XScanner::match(XToken type)
 {
 	if (!check(type))
 		return false;

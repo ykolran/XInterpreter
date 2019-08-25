@@ -183,44 +183,35 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="AstPrinter.h" />
     <ClInclude Include="CLogDataFile.h" />
-    <ClInclude Include="xchunk.h" />
-    <ClInclude Include="xcompiler.h" />
-    <ClInclude Include="Environment.h" />
-    <ClInclude Include="Expr.h" />
-    <ClInclude Include="Interpreter.h" />
-    <ClInclude Include="Parser.h" />
+    <ClInclude Include="XToken.h" />
+    <ClInclude Include="XChunk.h" />
+    <ClInclude Include="XCompiler.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="Scanner.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="Stmt.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="Token.h" />
-    <ClInclude Include="TokenType.h" />
     <ClInclude Include="XInterpreter.h" />
     <ClInclude Include="XInterpreterDlg.h" />
-    <ClInclude Include="xobject.h" />
-    <ClInclude Include="xscanner.h" />
-    <ClInclude Include="xvalue.h" />
-    <ClInclude Include="xvm.h" />
+    <ClInclude Include="XObject.h" />
+    <ClInclude Include="XOpCode.h" />
+    <ClInclude Include="XScanner.h" />
+    <ClInclude Include="XValue.h" />
+    <ClInclude Include="XVM.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="xchunk.cpp" />
-    <ClCompile Include="Scanner.cpp" />
+    <ClCompile Include="XChunk.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Token.cpp" />
-    <ClCompile Include="xcompiler.cpp" />
+    <ClCompile Include="XCompiler.cpp" />
     <ClCompile Include="XInterpreter.cpp" />
     <ClCompile Include="XInterpreterDlg.cpp" />
-    <ClCompile Include="xscanner.cpp" />
-    <ClCompile Include="xvalue.cpp" />
-    <ClCompile Include="xvm.cpp" />
+    <ClCompile Include="XScanner.cpp" />
+    <ClCompile Include="XValue.cpp" />
+    <ClCompile Include="XVM.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="res\XInterpreter.rc2" />
@@ -233,7 +224,7 @@
     <Image Include="res\XInterpreter.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="xgrammer.txt" />
+    <Text Include="XGrammer.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

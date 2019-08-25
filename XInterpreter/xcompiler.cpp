@@ -1,6 +1,6 @@
 #include "stdafx.h"
-#include "xcompiler.h"
-#include "xscanner.h"
+#include "XCompiler.h"
+#include "XScanner.h"
 #include "XInterpreterDlg.h"
 #include <algorithm>
 
@@ -61,14 +61,14 @@ XCompiler::XCompiler(XScanner& scanner, std::string name, FunctionType type) :
 	m_file(nullptr)
 {
 	m_scopeDepth = 0;
-	XScanner::Token t{ TokenT::NIL, "", 0, 0 };
+	XTokenData t{ XToken::NIL, "", 0, 0 };
 	m_locals.emplace_back(t, 0);
 }
 
 std::shared_ptr<ObjFunction> XCompiler::compile()
 {
 	m_scanner.advanceToken();
-	while (!m_scanner.match(TokenT::_EOF))
+	while (!m_scanner.match(XToken::_EOF))
 	{
 		usingDeclaration();
 	}
@@ -83,9 +83,9 @@ std::shared_ptr<ObjFunction> XCompiler::compile()
 
 void XCompiler::usingDeclaration()
 {
-	if (m_scanner.match(TokenT::USING))
+	if (m_scanner.match(XToken::USING))
 	{
-		m_scanner.consume(TokenT::IDENTIFIER, "Expected file-name after 'using'");
+		m_scanner.consume(XToken::IDENTIFIER, "Expected file-name after 'using'");
 		std::string filename(m_scanner.previous().start, m_scanner.previous().length);
 		auto it = std::find_if(DLG()->m_files.begin(), DLG()->m_files.end(), [&filename](const auto& a) {return a.first == filename; });
 		if (it == DLG()->m_files.end())
@@ -93,11 +93,11 @@ void XCompiler::usingDeclaration()
 			error((filename + " file not found").c_str());
 			return;
 		}
-		m_scanner.consume(TokenT::LEFT_BRACE, "Expected '{' after using file-name.");
+		m_scanner.consume(XToken::LEFT_BRACE, "Expected '{' after using file-name.");
 		{
 			beginScope();
 			m_file = it->second;
-			emitInstruction(OpCode::FILE);
+			emitInstruction(XOpCode::FILE);
 			for (int i = 0; i < sizeof(intptr_t); i++)
 				emitByte((reinterpret_cast<intptr_t>(m_file) >> i * 8) & 0xFF);
 			block();
@@ -116,11 +116,11 @@ void XCompiler::usingDeclaration()
 
 void XCompiler::declaration()
 {
-	if (m_scanner.match(TokenT::FUN))
+	if (m_scanner.match(XToken::FUN))
 	{
 		funDeclaration();
 	}
-	else if (m_scanner.match(TokenT::VAR)) 
+	else if (m_scanner.match(XToken::VAR)) 
 	{
 		varDeclaration();
 	}
@@ -136,8 +136,8 @@ void XCompiler::function(FunctionType type)
 	compiler.beginScope();
 
 	// Compile the parameter list.                                
-	m_scanner.consume(TokenT::LEFT_PAREN, "Expect '(' after function name.");
-	if (!m_scanner.check(TokenT::RIGHT_PAREN)) 
+	m_scanner.consume(XToken::LEFT_PAREN, "Expect '(' after function name.");
+	if (!m_scanner.check(XToken::RIGHT_PAREN)) 
 	{
 		do 
 		{
@@ -149,18 +149,18 @@ void XCompiler::function(FunctionType type)
 
 			uint8_t paramConstant = compiler.parseVariable("Expect parameter name.");
 			compiler.defineVariable(paramConstant);
-		} while (m_scanner.match(TokenT::COMMA));
+		} while (m_scanner.match(XToken::COMMA));
 	}
-	m_scanner.consume(TokenT::RIGHT_PAREN, "Expect ')' after parameters.");
+	m_scanner.consume(XToken::RIGHT_PAREN, "Expect ')' after parameters.");
 
 	// The body.                                                  
-	m_scanner.consume(TokenT::LEFT_BRACE, "Expect '{' before function body.");
+	m_scanner.consume(XToken::LEFT_BRACE, "Expect '{' before function body.");
 	compiler.block();
 
 	// Create the function object.                                
 	compiler.endCompiler();
 	if (!m_scanner.hadError())
-		return emitInstruction(OpCode::CONSTANT, makeConstant(compiler.m_compilingFunction));
+		return emitInstruction(XOpCode::CONSTANT, makeConstant(compiler.m_compilingFunction));
 }
 
 void XCompiler::funDeclaration()
@@ -174,36 +174,36 @@ void XCompiler::funDeclaration()
 void XCompiler::varDeclaration() 
 {
 	uint8_t global = parseVariable("Expect variable name.");
-	m_scanner.consume(TokenT::EQUAL, "Expect assignment.");
+	m_scanner.consume(XToken::EQUAL, "Expect assignment.");
 	expression();
-	m_scanner.consume(TokenT::SEMICOLON, "Expect ';' after variable declaration.");
+	m_scanner.consume(XToken::SEMICOLON, "Expect ';' after variable declaration.");
 
 	defineVariable(global);
 }
 
 void XCompiler::statement()
 {
-	if (m_scanner.match(TokenT::PRINT))
+	if (m_scanner.match(XToken::PRINT))
 	{
 		printStatement();
 	}
-	else if (m_scanner.match(TokenT::FOR))
+	else if (m_scanner.match(XToken::FOR))
 	{
 		forStatement();
 	}
-	else if (m_scanner.match(TokenT::IF))
+	else if (m_scanner.match(XToken::IF))
 	{
 		ifStatement();
 	}
-	else if (m_scanner.match(TokenT::RETURN))
+	else if (m_scanner.match(XToken::RETURN))
 	{
 		returnStatement();
 	}
-	else if (m_scanner.match(TokenT::WHILE)) 
+	else if (m_scanner.match(XToken::WHILE)) 
 	{
 		whileStatement();
 	}
-	else if (m_scanner.match(TokenT::LEFT_BRACE))
+	else if (m_scanner.match(XToken::LEFT_BRACE))
 	{
 		beginScope();
 		block();
@@ -218,26 +218,26 @@ void XCompiler::statement()
 void XCompiler::printStatement() 
 {
 	expression();
-	m_scanner.consume(TokenT::SEMICOLON, "Expect ';' after value.");
-	emitInstruction(OpCode::PRINT);
+	m_scanner.consume(XToken::SEMICOLON, "Expect ';' after value.");
+	emitInstruction(XOpCode::PRINT);
 }
 
 void XCompiler::expressionStatement()
 {
 	expression();
-	m_scanner.consume(TokenT::SEMICOLON, "Expect ';' after expression.");
-	emitInstruction(OpCode::POP);
+	m_scanner.consume(XToken::SEMICOLON, "Expect ';' after expression.");
+	emitInstruction(XOpCode::POP);
 }
 
 void XCompiler::forStatement() 
 {
 	beginScope();
-	m_scanner.consume(TokenT::LEFT_PAREN, "Expect '(' after 'for'.");
-	if (m_scanner.match(TokenT::VAR)) 
+	m_scanner.consume(XToken::LEFT_PAREN, "Expect '(' after 'for'.");
+	if (m_scanner.match(XToken::VAR)) 
 	{
 		varDeclaration();
 	}
-	else if (m_scanner.match(TokenT::SEMICOLON)) 
+	else if (m_scanner.match(XToken::SEMICOLON)) 
 	{
 		// No initializer.                                 
 	}
@@ -249,24 +249,24 @@ void XCompiler::forStatement()
 	int loopStart = chunk().size();
 
 	int exitJump = -1;
-	if (!m_scanner.match(TokenT::SEMICOLON)) 
+	if (!m_scanner.match(XToken::SEMICOLON)) 
 	{
 		expression();
-		m_scanner.consume(TokenT::SEMICOLON, "Expect ';' after loop condition.");
+		m_scanner.consume(XToken::SEMICOLON, "Expect ';' after loop condition.");
 
 		// Jump out of the loop if the condition is false.           
-		exitJump = emitJump(OpCode::JUMP_IF_FALSE);
-		emitInstruction(OpCode::POP); // Condition.                              
+		exitJump = emitJump(XOpCode::JUMP_IF_FALSE);
+		emitInstruction(XOpCode::POP); // Condition.                              
 	}
 
-	if (!m_scanner.match(TokenT::RIGHT_PAREN)) 
+	if (!m_scanner.match(XToken::RIGHT_PAREN)) 
 	{
-		int bodyJump = emitJump(OpCode::JUMP);
+		int bodyJump = emitJump(XOpCode::JUMP);
 
 		int incrementStart = chunk().size();
 		expression();
-		emitInstruction(OpCode::POP);
-		m_scanner.consume(TokenT::RIGHT_PAREN, "Expect ')' after for clauses.");
+		emitInstruction(XOpCode::POP);
+		m_scanner.consume(XToken::RIGHT_PAREN, "Expect ')' after for clauses.");
 
 		emitLoop(loopStart);
 		loopStart = incrementStart;
@@ -280,7 +280,7 @@ void XCompiler::forStatement()
 	if (exitJump != -1) 
 	{
 		patchJump(exitJump);
-		emitInstruction(OpCode::POP); // Condition.
+		emitInstruction(XOpCode::POP); // Condition.
 	}
 
 	endScope();
@@ -288,19 +288,19 @@ void XCompiler::forStatement()
 
 void XCompiler::ifStatement() 
 {
-	m_scanner.consume(TokenT::LEFT_PAREN, "Expect '(' after 'if'.");
+	m_scanner.consume(XToken::LEFT_PAREN, "Expect '(' after 'if'.");
 	expression();
-	m_scanner.consume(TokenT::RIGHT_PAREN, "Expect ')' after condition.");
+	m_scanner.consume(XToken::RIGHT_PAREN, "Expect ')' after condition.");
 
-	int thenJump = emitJump(OpCode::JUMP_IF_FALSE);
-	emitInstruction(OpCode::POP);
+	int thenJump = emitJump(XOpCode::JUMP_IF_FALSE);
+	emitInstruction(XOpCode::POP);
 	statement();
 
-	int elseJump = emitJump(OpCode::JUMP);
+	int elseJump = emitJump(XOpCode::JUMP);
 	patchJump(thenJump);
-	emitInstruction(OpCode::POP);
+	emitInstruction(XOpCode::POP);
 
-	if (m_scanner.match(TokenT::ELSE)) 
+	if (m_scanner.match(XToken::ELSE)) 
 		statement();
 	patchJump(elseJump);
 }
@@ -312,34 +312,34 @@ void XCompiler::returnStatement()
 		error("Cannot return from top-level code.");
 	}
 
-	if (m_scanner.match(TokenT::SEMICOLON))
+	if (m_scanner.match(XToken::SEMICOLON))
 	{
 		emitReturn();
 	}
 	else 
 	{
 		expression();
-		m_scanner.consume(TokenT::SEMICOLON, "Expect ';' after return value.");
-		emitInstruction(OpCode::RETURN);
+		m_scanner.consume(XToken::SEMICOLON, "Expect ';' after return value.");
+		emitInstruction(XOpCode::RETURN);
 	}
 }
 
 void XCompiler::whileStatement()
 {
 	int loopStart = chunk().size();
-	m_scanner.consume(TokenT::LEFT_PAREN, "Expect '(' after 'while'.");
+	m_scanner.consume(XToken::LEFT_PAREN, "Expect '(' after 'while'.");
 	expression();
-	m_scanner.consume(TokenT::RIGHT_PAREN, "Expect ')' after condition.");
+	m_scanner.consume(XToken::RIGHT_PAREN, "Expect ')' after condition.");
 
-	int exitJump = emitJump(OpCode::JUMP_IF_FALSE);
+	int exitJump = emitJump(XOpCode::JUMP_IF_FALSE);
 
-	emitInstruction(OpCode::POP);
+	emitInstruction(XOpCode::POP);
 	statement();
 
 	emitLoop(loopStart);
 
 	patchJump(exitJump);
-	emitInstruction(OpCode::POP);
+	emitInstruction(XOpCode::POP);
 }
 
 void XCompiler::expression()
@@ -349,13 +349,13 @@ void XCompiler::expression()
 
 void XCompiler::block() 
 {
-	while (!m_scanner.check(TokenT::RIGHT_BRACE) && 
-		   !m_scanner.check(TokenT::_EOF)) 
+	while (!m_scanner.check(XToken::RIGHT_BRACE) && 
+		   !m_scanner.check(XToken::_EOF)) 
 	{
 		usingDeclaration();
 	}
 
-	m_scanner.consume(TokenT::RIGHT_BRACE, "Expect '}' after block.");
+	m_scanner.consume(XToken::RIGHT_BRACE, "Expect '}' after block.");
 }
 
 void XCompiler::number(bool /*canAssign*/)
@@ -374,16 +374,16 @@ void XCompiler::variable(bool canAssign)
 	namedVariable(m_scanner.previous(), canAssign);
 }
 
-void XCompiler::namedVariable(const XScanner::Token& name, bool canAssign) 
+void XCompiler::namedVariable(const XTokenData& name, bool canAssign) 
 {
-	OpCode getOp = OpCode::GET_GLOBAL;
-	OpCode setOp = OpCode::SET_GLOBAL;
+	XOpCode getOp = XOpCode::GET_GLOBAL;
+	XOpCode setOp = XOpCode::SET_GLOBAL;
 
 	int arg = resolveLocal(name);
 	if (arg != -1) 
 	{
-		getOp = OpCode::GET_LOCAL;
-		setOp = OpCode::SET_LOCAL;
+		getOp = XOpCode::GET_LOCAL;
+		setOp = XOpCode::SET_LOCAL;
 	}
 	else if (m_file != nullptr)
 	{
@@ -391,7 +391,7 @@ void XCompiler::namedVariable(const XScanner::Token& name, bool canAssign)
 		if (it != m_file->columns.end())
 		{
 			arg = it - m_file->columns.begin();
-			getOp = OpCode::GET_COLUMN;
+			getOp = XOpCode::GET_COLUMN;
 			canAssign = false;
 		}
 	}
@@ -401,7 +401,7 @@ void XCompiler::namedVariable(const XScanner::Token& name, bool canAssign)
 		arg = identifierConstant(name);
 	}
 
-	if (canAssign && m_scanner.match(TokenT::EQUAL))
+	if (canAssign && m_scanner.match(XToken::EQUAL))
 	{
 		expression();
 		emitInstruction(setOp, static_cast<uint8_t>(arg));
@@ -414,21 +414,21 @@ void XCompiler::namedVariable(const XScanner::Token& name, bool canAssign)
 
 void XCompiler::grouping(bool /*canAssign*/) {
 	expression();
-	m_scanner.consume(TokenT::RIGHT_PAREN, "Expect ')' after expression.");
+	m_scanner.consume(XToken::RIGHT_PAREN, "Expect ')' after expression.");
 }
 
 void XCompiler::unary(bool /*canAssign*/) {
-	TokenT operatorType = m_scanner.previous().type;
+	XToken operatorType = m_scanner.previous().type;
 
 	// Compile the operand.                        
 	parsePrecedence(Precedence::UNARY);
 
 	// Emit the operator instruction.              
 	switch (operatorType) {
-	case TokenT::MINUS: 
-		emitInstruction(OpCode::NEGATE); break;
-	case TokenT::BANG:
-		emitInstruction(OpCode::NOT); break;
+	case XToken::MINUS: 
+		emitInstruction(XOpCode::NEGATE); break;
+	case XToken::BANG:
+		emitInstruction(XOpCode::NOT); break;
 	default:
 		return; // Unreachable.                    
 	}
@@ -437,7 +437,7 @@ void XCompiler::unary(bool /*canAssign*/) {
 void XCompiler::binary() 
 {
 	// Remember the operator.                                
-	TokenT operatorType = m_scanner.previous().type;
+	XToken operatorType = m_scanner.previous().type;
 
 	// Compile the right operand.                            
 	const ParseRule& rule = getRule(operatorType);
@@ -446,16 +446,16 @@ void XCompiler::binary()
 	// Emit the operator instruction.                        
 	switch (operatorType) 
 	{
-	case TokenT::BANG_EQUAL:    emitInstruction(OpCode::EQUAL); emitInstruction(OpCode::NOT); break;
-	case TokenT::EQUAL_EQUAL:   emitInstruction(OpCode::EQUAL); break;
-	case TokenT::GREATER:       emitInstruction(OpCode::GREATER); break;
-	case TokenT::GREATER_EQUAL: emitInstruction(OpCode::LESS); emitInstruction(OpCode::NOT); break;
-	case TokenT::LESS:          emitInstruction(OpCode::LESS); break;
-	case TokenT::LESS_EQUAL:    emitInstruction(OpCode::GREATER); emitInstruction(OpCode::NOT); break;
-	case TokenT::PLUS:          emitInstruction(OpCode::ADD); break;
-	case TokenT::MINUS:         emitInstruction(OpCode::SUBTRACT); break;
-	case TokenT::STAR:          emitInstruction(OpCode::MULTIPLY); break;
-	case TokenT::SLASH:         emitInstruction(OpCode::DIVIDE); break;
+	case XToken::BANG_EQUAL:    emitInstruction(XOpCode::EQUAL); emitInstruction(XOpCode::NOT); break;
+	case XToken::EQUAL_EQUAL:   emitInstruction(XOpCode::EQUAL); break;
+	case XToken::GREATER:       emitInstruction(XOpCode::GREATER); break;
+	case XToken::GREATER_EQUAL: emitInstruction(XOpCode::LESS); emitInstruction(XOpCode::NOT); break;
+	case XToken::LESS:          emitInstruction(XOpCode::LESS); break;
+	case XToken::LESS_EQUAL:    emitInstruction(XOpCode::GREATER); emitInstruction(XOpCode::NOT); break;
+	case XToken::PLUS:          emitInstruction(XOpCode::ADD); break;
+	case XToken::MINUS:         emitInstruction(XOpCode::SUBTRACT); break;
+	case XToken::STAR:          emitInstruction(XOpCode::MULTIPLY); break;
+	case XToken::SLASH:         emitInstruction(XOpCode::DIVIDE); break;
 	default:
 		return; // Unreachable.                              
 	}
@@ -464,14 +464,14 @@ void XCompiler::binary()
 void XCompiler::call()
 {
 	uint8_t argCount = argumentList();
-	emitInstruction(OpCode::CALL, argCount);
+	emitInstruction(XOpCode::CALL, argCount);
 }
 
 void XCompiler::and() 
 {
-	int endJump = emitJump(OpCode::JUMP_IF_FALSE);
+	int endJump = emitJump(XOpCode::JUMP_IF_FALSE);
 
-	emitInstruction(OpCode::POP);
+	emitInstruction(XOpCode::POP);
 	parsePrecedence(Precedence::AND);
 
 	patchJump(endJump);
@@ -479,11 +479,11 @@ void XCompiler::and()
 
 void XCompiler::or()
 {
-	int elseJump = emitJump(OpCode::JUMP_IF_FALSE);
-	int endJump = emitJump(OpCode::JUMP);
+	int elseJump = emitJump(XOpCode::JUMP_IF_FALSE);
+	int endJump = emitJump(XOpCode::JUMP);
 
 	patchJump(elseJump);
-	emitInstruction(OpCode::POP);
+	emitInstruction(XOpCode::POP);
 
 	parsePrecedence(Precedence::OR);
 	patchJump(endJump);
@@ -492,9 +492,9 @@ void XCompiler::or()
 void XCompiler::literal(bool /*canAssign*/)
 {
 	switch (m_scanner.previous().type) {
-	case TokenT::_FALSE: emitInstruction(OpCode::_FALSE); break;
-	case TokenT::NIL: emitInstruction(OpCode::NIL); break;
-	case TokenT::_TRUE: emitInstruction(OpCode::_TRUE); break;
+	case XToken::_FALSE: emitInstruction(XOpCode::_FALSE); break;
+	case XToken::NIL: emitInstruction(XOpCode::NIL); break;
+	case XToken::_TRUE: emitInstruction(XOpCode::_TRUE); break;
 	default:
 		return; // Unreachable.                   
 	}
@@ -522,7 +522,7 @@ void XCompiler::parsePrecedence(Precedence precedence)
 			(this->*infixRule.infix)();
 	}
 
-	if (canAssign && m_scanner.match(TokenT::EQUAL))
+	if (canAssign && m_scanner.match(XToken::EQUAL))
 	{
 		error("Invalid assignment target.");
 		expression();
@@ -531,7 +531,7 @@ void XCompiler::parsePrecedence(Precedence precedence)
 
 uint8_t XCompiler::parseVariable(const char* errorMessage) 
 {
-	m_scanner.consume(TokenT::IDENTIFIER, errorMessage);
+	m_scanner.consume(XToken::IDENTIFIER, errorMessage);
 
 	declareVariable();
 	if (m_scopeDepth > 0)
@@ -578,13 +578,13 @@ void XCompiler::defineVariable(uint8_t global)
 		return;
 	}    
 
-	emitInstruction(OpCode::DEFINE_GLOBAL, global);
+	emitInstruction(XOpCode::DEFINE_GLOBAL, global);
 }
 
 uint8_t XCompiler::argumentList() 
 {
 	uint8_t argCount = 0;
-	if (!m_scanner.check(TokenT::RIGHT_PAREN)) 
+	if (!m_scanner.check(XToken::RIGHT_PAREN)) 
 	{
 		do 
 		{
@@ -594,10 +594,10 @@ uint8_t XCompiler::argumentList()
 				error("Cannot have more than 255 arguments.");
 			} 
 			argCount++;
-		} while (m_scanner.match(TokenT::COMMA));
+		} while (m_scanner.match(XToken::COMMA));
 	}
 
-	m_scanner.consume(TokenT::RIGHT_PAREN, "Expect ')' after arguments.");
+	m_scanner.consume(XToken::RIGHT_PAREN, "Expect ')' after arguments.");
 	return argCount;
 }
 
@@ -615,7 +615,7 @@ uint8_t XCompiler::makeConstant(const Value& value)
 
 void XCompiler::emitLoop(int loopStart) 
 {
-	emitInstruction(OpCode::LOOP);
+	emitInstruction(XOpCode::LOOP);
 
 	int offset = chunk().size() - loopStart + 2;
 	if (offset > std::numeric_limits<uint16_t>::max()) 
@@ -656,20 +656,20 @@ void XCompiler::endScope()
 	m_scopeDepth--;   
 	while (m_locals.size() > 0 && m_locals.back().depth > m_scopeDepth)
 	{
-		emitInstruction(OpCode::POP);
+		emitInstruction(XOpCode::POP);
 		m_locals.pop_back();
 	}
 }
 
 
-bool XCompiler::identifiersEqual(const XScanner::Token& a, const XScanner::Token& b) const
+bool XCompiler::identifiersEqual(const XTokenData& a, const XTokenData& b) const
 {
 	if (a.length != b.length) 
 		return false;
 	return memcmp(a.start, b.start, a.length) == 0;
 }
 
-int XCompiler::resolveLocal(const XScanner::Token& name)
+int XCompiler::resolveLocal(const XTokenData& name)
 {
 	for (int i = m_locals.size() - 1; i >= 0; i--) 
 	{

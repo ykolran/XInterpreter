@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#include "xvm.h"
+#include "XVM.h"
 #include "XInterpreterDlg.h"
-#include "xcompiler.h"
-#include "xobject.h"
+#include "XCompiler.h"
+#include "XObject.h"
 #include <algorithm>
 #include <time.h>
 
@@ -169,29 +169,29 @@ InterpretResult XVM::run()
 		DLG()->m_executionTrace.AppendFormat("\r\n");
 		chunk().disassembleInstruction(ip(), true);
 #endif  
-		OpCode instruction = readOpCode();
+		XOpCode instruction = readOpCode();
 		InterpretResult result = InterpretResult::OK;
 
 		switch (instruction)
 		{
-		case OpCode::CONSTANT:	result = push(readConstant());	break;
-		case OpCode::NIL:		result = push(0.0);				break;
-		case OpCode::_TRUE:		result = push(true);			break;
-		case OpCode::_FALSE:	result = push(false);			break;
-		case OpCode::POP:		pop();							break;
-		case OpCode::GET_LOCAL:
+		case XOpCode::CONSTANT:	result = push(readConstant());	break;
+		case XOpCode::NIL:		result = push(0.0);				break;
+		case XOpCode::_TRUE:		result = push(true);			break;
+		case XOpCode::_FALSE:	result = push(false);			break;
+		case XOpCode::POP:		pop();							break;
+		case XOpCode::GET_LOCAL:
 		{
 			uint8_t slot = readByte();
 			result = push(m_stack[m_frames.back().slots + slot]);
 			break;
 		}
-		case OpCode::SET_LOCAL:
+		case XOpCode::SET_LOCAL:
 		{
 			uint8_t slot = readByte();
 			m_stack[m_frames.back().slots + slot] = peek(0);
 			break;
 		}
-		case OpCode::GET_GLOBAL:
+		case XOpCode::GET_GLOBAL:
 		{
 			const std::string& name = readConstant();
 			auto it = globals.find(name);
@@ -203,7 +203,7 @@ InterpretResult XVM::run()
 			result = push(it->second);
 			break;
 		}
-		case OpCode::DEFINE_GLOBAL:
+		case XOpCode::DEFINE_GLOBAL:
 		{
 			const Value& c = readConstant();
 			if (globals.find(c) == globals.end())
@@ -213,7 +213,7 @@ InterpretResult XVM::run()
 			pop();
 			break;
 		}
-		case OpCode::SET_GLOBAL:
+		case XOpCode::SET_GLOBAL:
 		{
 			const Value& value = readConstant();
 			const std::string& name(value);
@@ -229,7 +229,7 @@ InterpretResult XVM::run()
 			}
 			break;
 		}
-		case OpCode::FILE:
+		case XOpCode::FILE:
 		{
 			intptr_t filePtr = 0;
 			for (int i = 0; i < sizeof(intptr_t); i++)
@@ -238,13 +238,13 @@ InterpretResult XVM::run()
 			m_file = reinterpret_cast<CLogDataFile*>(filePtr);
 			break;
 		}
-		case OpCode::GET_COLUMN:
+		case XOpCode::GET_COLUMN:
 		{
 			uint8_t slot = readByte();
 			result = push(Value(ColumnLength{ m_file->m_sizeFilled }, m_file->m_data[slot]));
 			break;
 		}
-		case OpCode::EQUAL:
+		case XOpCode::EQUAL:
 		{
 			Value b = pop();
 			Value a = pop();
@@ -263,44 +263,44 @@ InterpretResult XVM::run()
 			}
 			break;
 		}
-		case OpCode::ADD:		result = binaryOp(add);		 break;
-		case OpCode::SUBTRACT:	result = binaryOp(subtract); break;
-		case OpCode::MULTIPLY:	result = binaryOp(multiply); break;
-		case OpCode::DIVIDE:	result = binaryOp(divide);	 break;
-		case OpCode::GREATER:	result = binaryOp(greater);	 break;
-		case OpCode::LESS:		result = binaryOp(less);	 break;
-		case OpCode::NOT:		result = push(!pop().asBool());		 break;
-		case OpCode::NEGATE:	result = negate();			 break;
-		case OpCode::PRINT:
+		case XOpCode::ADD:		result = binaryOp(add);		 break;
+		case XOpCode::SUBTRACT:	result = binaryOp(subtract); break;
+		case XOpCode::MULTIPLY:	result = binaryOp(multiply); break;
+		case XOpCode::DIVIDE:	result = binaryOp(divide);	 break;
+		case XOpCode::GREATER:	result = binaryOp(greater);	 break;
+		case XOpCode::LESS:		result = binaryOp(less);	 break;
+		case XOpCode::NOT:		result = push(!pop().asBool());		 break;
+		case XOpCode::NEGATE:	result = negate();			 break;
+		case XOpCode::PRINT:
 			printValue(DLG()->m_output, pop());
 			DLG()->m_output.AppendFormat("\r\n");
 			break;
-		case OpCode::JUMP:
+		case XOpCode::JUMP:
 		{
 			uint16_t offset = readShort();
 			ip() += offset;
 			break;
 		}
-		case OpCode::JUMP_IF_FALSE:
+		case XOpCode::JUMP_IF_FALSE:
 		{
 			uint16_t offset = readShort();
 			if (!peek(0))
 				ip() += offset;
 			break;
 		}
-		case OpCode::LOOP:
+		case XOpCode::LOOP:
 		{
 			uint16_t offset = readShort();
 			ip() -= offset;
 			break;
 		}
-		case OpCode::CALL:
+		case XOpCode::CALL:
 		{
 			int argCount = readByte();
 			result = callValue(peek(argCount), argCount);
 			break;
 		}
-		case OpCode::RETURN:
+		case XOpCode::RETURN:
 		{
 			Value funResult = pop();
 			int currentSlots = m_frames.back().slots;
