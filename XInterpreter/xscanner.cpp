@@ -59,7 +59,7 @@ XTokenData XScanner::makeToken(XToken type)
 	XTokenData token;
 	token.type = type;
 	token.start = m_start;
-	token.length = (int)(m_current - m_start);
+	token.length = m_current - m_start;
 	token.line = m_line;
 
 	return token;
@@ -70,7 +70,7 @@ XTokenData XScanner::errorToken(const char* message)
 	XTokenData token;
 	token.type = XToken::_ERROR;
 	token.start = message;
-	token.length = (int)strlen(message);
+	token.length = strlen(message);
 	token.line = m_line;
 
 	return token;

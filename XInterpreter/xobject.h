@@ -18,7 +18,7 @@ struct Obj
 
 struct ObjString : public Obj
 {
-	ObjString(const char* c, int len) :
+	ObjString(const char* c, unsigned int len) :
 		Obj(ObjType::STRING),
 		str(c, len)
 	{
@@ -51,7 +51,7 @@ struct ObjColumn : public Obj
 	}
 
 	double * data;
-	int length;
+	unsigned int length;
 
 };
 

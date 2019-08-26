@@ -119,7 +119,6 @@ private:
 	};
 
 	std::vector<Local> m_locals;
-	CLogDataFile* m_file;
 	int m_scopeDepth;
 
 	// rules per token

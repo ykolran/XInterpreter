@@ -2,7 +2,7 @@
 #include "XValue.h"
 #include "XObject.h"
 
-Value::Value(const char* c, int len) : 
+Value::Value(const char* c, unsigned int len) : 
 	type(ValueType::OBJ), 
 	obj(new ObjString(c, len)) 
 {

@@ -13,8 +13,6 @@ enum class XOpCode : uint8_t
 	GET_GLOBAL,
 	DEFINE_GLOBAL,
 	SET_GLOBAL,
-	FILE,
-	GET_COLUMN,
 	EQUAL,
 	GREATER,
 	LESS,

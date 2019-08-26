@@ -37,7 +37,6 @@ private:
 	codeIterator simpleInstruction(CString& out, const char* name, codeIterator it) const;
 	codeIterator jumpInstruction(CString& out, const char* name, int sign, codeIterator it) const;
 	codeIterator byteInstruction(CString& out, const char* name, codeIterator it) const;
-	codeIterator fileInstruction(CString& out, const char* name, codeIterator it) const;
 	codeIterator constantInstruction(CString& out, const char* name, codeIterator it) const;
 
 	std::vector<uint8_t> code;

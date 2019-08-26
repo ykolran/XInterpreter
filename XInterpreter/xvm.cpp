@@ -42,7 +42,6 @@ InterpretResult XVM::interpret(const char* source)
 {
 	XScanner scanner(source);
 	XCompiler compiler(scanner, "", FunctionType::SCRIPT);
-	m_file = nullptr;
 	std::shared_ptr<ObjFunction> function = compiler.compile();
 	if (!function) {
 		return InterpretResult::COMPILE_ERROR;
@@ -83,7 +82,7 @@ InterpretResult XVM::binaryOp(OP op)
 	}
 	else if (bPeek.isColumn() && aPeek.isColumn())
 	{
-		int len = bPeek.asColumn().length;
+		unsigned int len = bPeek.asColumn().length;
 
 		if (len == aPeek.asColumn().length)
 		{
@@ -91,7 +90,7 @@ InterpretResult XVM::binaryOp(OP op)
 			Value a = pop();
 
 			Value result(ColumnLength{ len });
-			for (int i = 0; i < len; i++)
+			for (unsigned int i = 0; i < len; i++)
 				result.asColumn().data[i] = op(a.asColumn().data[i], b.asColumn().data[i]);
 			return push(result);
 		}
@@ -101,7 +100,7 @@ InterpretResult XVM::binaryOp(OP op)
 			Value a = pop();
 
 			Value result(ColumnLength{ aPeek.asColumn().length });
-			for (int i = 0; i < aPeek.asColumn().length; i++)
+			for (unsigned int i = 0; i < aPeek.asColumn().length; i++)
 				result.asColumn().data[i] = op(a.asColumn().data[i], b.asColumn().data[0]);
 			return push(result);
 		}
@@ -111,7 +110,7 @@ InterpretResult XVM::binaryOp(OP op)
 			Value a = pop();
 
 			Value result(ColumnLength{ len });
-			for (int i = 0; i < len; i++)
+			for (unsigned int i = 0; i < len; i++)
 				result.asColumn().data[i] = op(a.asColumn().data[0], b.asColumn().data[i]);
 			return push(result);
 		}
@@ -127,7 +126,7 @@ InterpretResult XVM::binaryOp(OP op)
 		Value a = pop();
 
 		Value result(ColumnLength{ b.asColumn().length });
-		for (int i = 0; i < b.asColumn().length; i++)
+		for (unsigned int i = 0; i < b.asColumn().length; i++)
 			result.asColumn().data[i] = op(a.asDouble(), b.asColumn().data[i]);
 		return push(result);
 	}
@@ -137,7 +136,7 @@ InterpretResult XVM::binaryOp(OP op)
 		Value a = pop();
 
 		Value result(ColumnLength{ a.asColumn().length });
-		for (int i = 0; i < a.asColumn().length; i++)
+		for (unsigned int i = 0; i < a.asColumn().length; i++)
 			result.asColumn().data[i] = op(a.asColumn().data[i], b.asDouble());
 		return push(result);
 	}
@@ -229,21 +228,6 @@ InterpretResult XVM::run()
 			}
 			break;
 		}
-		case XOpCode::FILE:
-		{
-			intptr_t filePtr = 0;
-			for (int i = 0; i < sizeof(intptr_t); i++)
-				filePtr |= static_cast<intptr_t>(*ip()++) << i * 8;
-
-			m_file = reinterpret_cast<CLogDataFile*>(filePtr);
-			break;
-		}
-		case XOpCode::GET_COLUMN:
-		{
-			uint8_t slot = readByte();
-			result = push(Value(ColumnLength{ m_file->m_sizeFilled }, m_file->m_data[slot]));
-			break;
-		}
 		case XOpCode::EQUAL:
 		{
 			Value b = pop();
@@ -257,7 +241,7 @@ InterpretResult XVM::run()
 			else if (b.isColumn() && a.isColumn())
 			{
 				bool equals = (b.asColumn().length == a.asColumn().length);
-				for (int i = 0; i < b.asColumn().length && equals; i++)
+				for (unsigned int i = 0; i < b.asColumn().length && equals; i++)
 					equals = (b.asColumn().data[i] == a.asColumn().data[i]);
 				result = push(equals);
 			}
@@ -349,7 +333,7 @@ void XVM::printObj(CString& out, Value value) const
 		break;
 	case ObjType::OWNING_COLUMN:
 	case ObjType::SHARED_COLUMN:
-		for (int i = 0; i < std::min(value.asColumn().length, 2); i++)
+		for (unsigned int i = 0; i < std::min(value.asColumn().length, 2u); i++)
 			out.AppendFormat("%g ", value.asColumn().data[i]);
 		if (value.asColumn().length > 2)
 			out.Append("...");
@@ -406,7 +390,7 @@ InterpretResult XVM::call(std::shared_ptr<ObjNative> function, int argCount)
 		auto begin = m_stack.end() - argCount;
 		if (begin->isColumn())
 		{
-			int len = begin->asColumn().length;
+			unsigned int len = begin->asColumn().length;
 			for (auto i = begin + 1; i != m_stack.end(); ++i)
 				if (!i->isColumn())
 				{
@@ -420,7 +404,7 @@ InterpretResult XVM::call(std::shared_ptr<ObjNative> function, int argCount)
 				}
 
 			Value ret(ColumnLength{ len });
-			for (int i = 0; i < len; i++)
+			for (unsigned int i = 0; i < len; i++)
 			{
 				std::vector<double> args;
 				for (auto j = begin; j != m_stack.end(); ++j)

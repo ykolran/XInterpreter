@@ -22,7 +22,7 @@ public:
 	int numColumns;
 	std::vector<std::string> columns;
 
-	int m_sizeFilled;
+	unsigned int m_sizeFilled;
 	double ** m_data;
 
 

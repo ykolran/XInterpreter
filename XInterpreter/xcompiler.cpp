@@ -57,12 +57,11 @@ XCompiler::ParseRule XCompiler::rules[] =
 XCompiler::XCompiler(XScanner& scanner, std::string name, FunctionType type) :
 	m_scanner(scanner),
 	m_compilingFunction(std::make_shared<ObjFunction>(name, 0)),
-	m_type(type),
-	m_file(nullptr)
+	m_type(type)
 {
 	m_scopeDepth = 0;
-	XTokenData t{ XToken::NIL, "", 0, 0 };
-	m_locals.emplace_back(t, 0);
+//	XTokenData t{ XToken::NIL, "", 0, 0 };
+//	m_locals.emplace_back(t, 0);
 }
 
 std::shared_ptr<ObjFunction> XCompiler::compile()
@@ -96,13 +95,14 @@ void XCompiler::usingDeclaration()
 		m_scanner.consume(XToken::LEFT_BRACE, "Expected '{' after using file-name.");
 		{
 			beginScope();
-			m_file = it->second;
-			emitInstruction(XOpCode::FILE);
-			for (int i = 0; i < sizeof(intptr_t); i++)
-				emitByte((reinterpret_cast<intptr_t>(m_file) >> i * 8) & 0xFF);
+			for (int i = 0; i < it->second->numColumns; i++)
+			{
+				XTokenData token{ XToken::IDENTIFIER, it->second->columns[i].c_str(), it->second->columns[i].size(), m_scanner.previous().line };
+				m_locals.emplace_back(token, m_scopeDepth);
+				emitConstant(Value(ColumnLength{ it->second->m_sizeFilled }, it->second->m_data[i]));
+			}
 			block();
 			endScope();
-			m_file = nullptr;
 		}
 	}
 	else
@@ -384,16 +384,6 @@ void XCompiler::namedVariable(const XTokenData& name, bool canAssign)
 	{
 		getOp = XOpCode::GET_LOCAL;
 		setOp = XOpCode::SET_LOCAL;
-	}
-	else if (m_file != nullptr)
-	{
-		auto it = find(m_file->columns.begin(), m_file->columns.end(), std::string(name.start, name.length));
-		if (it != m_file->columns.end())
-		{
-			arg = it - m_file->columns.begin();
-			getOp = XOpCode::GET_COLUMN;
-			canAssign = false;
-		}
 	}
 
 	if (arg == -1)

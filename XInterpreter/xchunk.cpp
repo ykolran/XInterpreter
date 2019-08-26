@@ -57,10 +57,6 @@ XChunk::codeIterator XChunk::disassembleInstruction(codeIterator it, bool trace)
 		return constantInstruction(out, "OP_DEFINE_GLOBAL", it);
 	case XOpCode::SET_GLOBAL:
 		return constantInstruction(out, "OP_SET_GLOBAL", it);
-	case XOpCode::FILE:
-		return fileInstruction(out, "OP_FILE", it);
-	case XOpCode::GET_COLUMN:
-		return byteInstruction(out, "OP_GET_COLUMN", it);
 	case XOpCode::EQUAL:
 		return simpleInstruction(out, "OP_EQUAL", it);
 	case XOpCode::GREATER:
@@ -118,15 +114,6 @@ XChunk::codeIterator XChunk::byteInstruction(CString& out, const char* name, cod
 	return it + 2;
 }
 
-XChunk::codeIterator XChunk::fileInstruction(CString& out, const char* name, codeIterator it) const
-{
-	intptr_t filePtr = 0;
-	for (int i=0; i<sizeof(intptr_t); i++)
-		filePtr |= static_cast<intptr_t>(*(it + 1 + i)) << i*8;
-	out.AppendFormat("%-16s 0x%0*x\r\n", name, sizeof(intptr_t)*2 ,filePtr);
-	return it + sizeof(intptr_t) + 1;
-}
-
 XChunk::codeIterator XChunk::constantInstruction(CString& out, const char* name, codeIterator it) const
 {
 	uint8_t constant = *(it + 1);
@@ -141,7 +128,7 @@ XChunk::codeIterator XChunk::constantInstruction(CString& out, const char* name,
 	{
 		const ObjColumn& col(constants[constant].asColumn());
 		out.Append("[");
-		int i = 0;
+		unsigned int i = 0;
 		for (; i < col.length && i < 3; i++)
 		{
 			out.AppendFormat("%g", col.data[i]);

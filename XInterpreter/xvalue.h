@@ -20,7 +20,7 @@ enum class ObjType
 
 struct ColumnLength
 {
-	int len;
+	unsigned int len;
 };
 
 struct Obj;
@@ -34,7 +34,7 @@ struct Value
 	Value(bool b) : type(ValueType::BOOL), number(b) {}
 	Value(double n) : type(ValueType::NUMBER), number(n) {}
 
-	Value(const char* c, int len);
+	Value(const char* c, unsigned int len);
 	Value(const std::string& str);
 	Value(std::shared_ptr<ObjFunction> fun);
 	Value(std::shared_ptr<ObjNative> fun);

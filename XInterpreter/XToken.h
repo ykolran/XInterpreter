@@ -27,6 +27,6 @@ struct XTokenData
 {
 	XToken type;
 	const char* start;
-	int length;
-	int line;
+	unsigned int length;
+	unsigned int line;
 };
