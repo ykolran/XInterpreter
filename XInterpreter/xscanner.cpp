@@ -62,6 +62,8 @@ XTokenData XScanner::makeToken(XToken type)
 	token.length = m_current - m_start;
 	token.line = m_line;
 
+	DLG()->ColorizeToken(token);
+
 	return token;
 }
 
