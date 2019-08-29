@@ -183,6 +183,7 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CodeEditCtrl.h" />
     <ClInclude Include="CLogDataFile.h" />
     <ClInclude Include="XToken.h" />
     <ClInclude Include="XChunk.h" />
@@ -199,6 +200,7 @@
     <ClInclude Include="XVM.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CodeEditCtrl.cpp" />
     <ClCompile Include="XChunk.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

@@ -60,6 +60,9 @@
     <ClInclude Include="XVM.h">
       <Filter>XVM</Filter>
     </ClInclude>
+    <ClInclude Include="CodeEditCtrl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="XInterpreter.cpp">
@@ -85,6 +88,9 @@
     </ClCompile>
     <ClCompile Include="XVM.cpp">
       <Filter>XVM</Filter>
+    </ClCompile>
+    <ClCompile Include="CodeEditCtrl.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
