@@ -4,6 +4,7 @@
 
 XScanner::XScanner(const char* source)
 {
+	m_source = source;
 	m_start = source;
 	m_current = source;
 	m_line = 1;
@@ -54,6 +55,59 @@ XTokenData XScanner::scanToken()
 	return errorToken("Unexpected character.");
 }
 
+static const CCodeEditCtrl::Types typeMap[] =
+{
+	// Single-character tokens.                      
+	CCodeEditCtrl::TYPE_OTHER, // LEFT_PAREN, 
+	CCodeEditCtrl::TYPE_OTHER, // RIGHT_PAREN
+	CCodeEditCtrl::TYPE_OTHER, // LEFT_BRACE
+	CCodeEditCtrl::TYPE_OTHER, // RIGHT_BRACE,
+	CCodeEditCtrl::TYPE_OTHER, // COMMA
+	CCodeEditCtrl::TYPE_OTHER, // DOT
+	CCodeEditCtrl::TYPE_OTHER, // MINUS
+	CCodeEditCtrl::TYPE_OTHER, // PLUS
+	CCodeEditCtrl::TYPE_OTHER, // SEMICOLON
+	CCodeEditCtrl::TYPE_OTHER, // SLASH
+	CCodeEditCtrl::TYPE_OTHER, // STAR
+
+	// One or two character tokens.                  
+	CCodeEditCtrl::TYPE_OTHER, // BANG
+	CCodeEditCtrl::TYPE_OTHER, // BANG_EQUAL,
+	CCodeEditCtrl::TYPE_OTHER, // EQUAL
+	CCodeEditCtrl::TYPE_OTHER, // EQUAL_EQUAL,
+	CCodeEditCtrl::TYPE_OTHER, // GREATER
+	CCodeEditCtrl::TYPE_OTHER, // GREATER_EQUAL,
+	CCodeEditCtrl::TYPE_OTHER, // LESS
+	CCodeEditCtrl::TYPE_OTHER, // LESS_EQUAL,
+
+	// Literals.                                     
+	CCodeEditCtrl::TYPE_OTHER, // IDENTIFIER
+	CCodeEditCtrl::TYPE_STRING, // STRING
+	CCodeEditCtrl::TYPE_NUMBER, // NUMBER,
+
+	// Keywords.                                     
+	CCodeEditCtrl::TYPE_KEYWORD, // AND
+	CCodeEditCtrl::TYPE_KEYWORD, // CLASS
+	CCodeEditCtrl::TYPE_KEYWORD, // ELSE
+	CCodeEditCtrl::TYPE_KEYWORD, // _FALSE
+	CCodeEditCtrl::TYPE_KEYWORD, // FUN
+	CCodeEditCtrl::TYPE_KEYWORD, // FOR
+	CCodeEditCtrl::TYPE_KEYWORD, // IF
+	CCodeEditCtrl::TYPE_KEYWORD, // NIL
+	CCodeEditCtrl::TYPE_KEYWORD, // OR,
+	CCodeEditCtrl::TYPE_KEYWORD, // PRINT
+	CCodeEditCtrl::TYPE_KEYWORD, // RETURN
+	CCodeEditCtrl::TYPE_KEYWORD, // SUPER
+	CCodeEditCtrl::TYPE_KEYWORD, // _THIS
+	CCodeEditCtrl::TYPE_KEYWORD, // _TRUE
+	CCodeEditCtrl::TYPE_KEYWORD, // VAR
+	CCodeEditCtrl::TYPE_KEYWORD, // WHILE,
+	CCodeEditCtrl::TYPE_KEYWORD, // USING,
+
+	CCodeEditCtrl::TYPE_ERROR, // _ERROR,
+	CCodeEditCtrl::TYPE_ERROR, // _EOF
+};
+
 XTokenData XScanner::makeToken(XToken type)
 {
 	XTokenData token;
@@ -62,7 +116,7 @@ XTokenData XScanner::makeToken(XToken type)
 	token.length = m_current - m_start;
 	token.line = m_line;
 
-	DLG()->ColorizeToken(token);
+	DLG()->m_cEdit1.Colorize(token.start - m_source, token.length, typeMap[static_cast<int>(token.type)]);
 
 	return token;
 }
@@ -103,8 +157,11 @@ void XScanner::skipWhitespace()
 			break;
 		case '/':
 			if (peekNext() == '/') {
+				const char * startOfComment = m_current;
 				// A comment goes until the end of the line.   
-				while (peek() != '\n' && !isAtEnd()) advance();
+				while (peek() != '\n' && peek() != '\r' && !isAtEnd()) 
+					advance();
+				DLG()->m_cEdit1.Colorize(startOfComment - m_source, m_current - startOfComment, CCodeEditCtrl::TYPE_COMMENT);
 			}
 			else {
 				return;

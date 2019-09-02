@@ -315,6 +315,56 @@ void CCodeEditCtrl::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	case (VK_TAB):
 		ReplaceSel("\t", TRUE);
 		return;
+	case (VK_RETURN):
+		{
+			CHARRANGE cr;
+			GetSel(cr);
+			long line = LineFromChar(cr.cpMin);
+			int ntabs = 0;
+			char buff[256];
+			int chars = GetLine(line, buff, sizeof(buff));
+			while (ntabs < chars && buff[ntabs] == '\t')
+				ntabs++;
+			for (int i = chars - 1; i >= 0; i--)
+			{
+				char c = buff[i];
+				if (c == '{')
+				{
+					ntabs++;
+					break;
+				}
+				if (c != '\r' && c != '\n' && c != ' ' && c != '\t')
+					break;
+			}
+
+			for (UINT i = 0; i < nRepCnt; i++)
+			{
+				CRichEditCtrl::OnKeyDown(nChar, 1, nFlags);
+				for (int t = 0; t < ntabs; t++)
+					ReplaceSel("\t", TRUE);
+			}
+			return;
+		}
+	
+		case VK_OEM_6: // '}'
+		{
+			SetRedraw(FALSE);
+			CHARRANGE cr;
+			GetSel(cr);
+			long line = LineFromChar(cr.cpMin);
+			long col = cr.cpMin - LineIndex(line);
+			char buff[256];
+			int chars = GetLine(line, buff, sizeof(buff));
+			if (col > 0 && chars > col && buff[col - 1] == '\t')
+			{
+				SetSel(cr.cpMin - 1, cr.cpMin);
+				ReplaceSel("", TRUE);
+				SetSel(cr);
+			}
+			SetRedraw(TRUE);
+			Invalidate();
+			break;
+		}
 	}
 	CRichEditCtrl::OnKeyDown(nChar, nRepCnt, nFlags);
 }
@@ -514,7 +564,8 @@ void CCodeEditCtrl::PreSubclassWindow()
 		pf.rgxTabs[itab] = (itab + 1) * 480;
 	SetParaFormat(pf);
 
-	SetEventMask(GetEventMask() | ENM_CHANGE);
+	DWORD eventMask = GetEventMask();
+	SetEventMask(eventMask | ENM_CHANGE);
 
 	CHARFORMAT format;
 	format.dwMask = CFM_CHARSET | CFM_FACE | CFM_SIZE | CFM_OFFSET | CFM_COLOR;
@@ -531,4 +582,43 @@ void CCodeEditCtrl::PreSubclassWindow()
 	SetDefaultCharFormat(format);
 
 	CRichEditCtrl::PreSubclassWindow();
+}
+
+void CCodeEditCtrl::Colorize(int start, unsigned int length, Types type)
+{
+	SetRedraw(FALSE);
+	CHARFORMAT format;
+	GetDefaultCharFormat(format);
+
+	format.dwMask = format.dwMask | CFM_COLOR;
+	format.crTextColor = RGB(0, 0, 0);
+
+	switch (type)
+	{	
+	case TYPE_STRING:
+		format.crTextColor = RGB(128, 128, 128);
+		break;
+	case TYPE_NUMBER:
+		format.crTextColor = RGB(255, 128, 0);
+		break;
+	case TYPE_COMMENT:
+		format.crTextColor = RGB(0, 128, 0);
+		break;
+	case TYPE_KEYWORD:
+		format.crTextColor = RGB(0, 0, 255);
+		break;
+	case TYPE_ERROR:
+		format.crTextColor = RGB(255, 0, 0);
+		break;
+	default:
+		break;
+	}
+
+	CHARRANGE prevSel;
+	GetSel(prevSel);
+	SetSel(start, start + length);
+	SetSelectionCharFormat(format);
+	SetSel(prevSel);
+	SetRedraw(TRUE);
+	Invalidate();
 }

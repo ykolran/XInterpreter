@@ -1,4 +1,6 @@
 #pragma once
+#include "XToken.h"
+#include <unordered_map>
 
 /////////////////////////////////////////////////////////////////////////////
 // CCodeEditCtrl window
@@ -6,6 +8,20 @@ class CCodeEditCtrl : public CRichEditCtrl
 {
 // Construction
 public:
+	enum Types
+	{
+		TYPE_KEYWORD,
+		TYPE_VARIABLE,
+		TYPE_STRING,
+		TYPE_NUMBER,
+		TYPE_FUNCTION,
+		TYPE_NATIVE_FUNCTION,
+		TYPE_FILE,
+		TYPE_COMMENT,
+		TYPE_OTHER,
+		TYPE_ERROR
+	};
+
 	CCodeEditCtrl();
 	
 // Attributes
@@ -26,6 +42,7 @@ protected:
 
 public:
 	/* Dictionary */
+	void Colorize(int start, unsigned int length, Types type);
 	void GetDictionary(CStringArray& dictionary);
 	void ResetDictionary();
 	BOOL AddKeyword(const CString& str);

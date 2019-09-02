@@ -54,6 +54,7 @@ private:
 	XTokenData number();
 	XTokenData identifier();
 
+	const char* m_source;
 	const char* m_start;
 	const char* m_current;
 	int m_line;

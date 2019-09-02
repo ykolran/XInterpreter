@@ -557,7 +557,8 @@ void XCompiler::declareVariable()
 
 void XCompiler::markInitialized()
 {
-	m_locals.back().depth = m_scopeDepth;
+	if (!m_locals.empty())
+		m_locals.back().depth = m_scopeDepth;
 }
 
 void XCompiler::defineVariable(uint8_t global) 
