@@ -1,6 +1,6 @@
 ﻿program				→	usingDeclaration* EOF
 
-usingDeclaration	→	"using" IDENTIFIER block
+usingDeclaration	→	"using" IDENTIFIER ("[" expression "]")? block
 						| declaration
 
 declaration			→	varDeclaration 

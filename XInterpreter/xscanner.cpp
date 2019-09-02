@@ -31,6 +31,8 @@ XTokenData XScanner::scanToken()
 	case ')': return makeToken(XToken::RIGHT_PAREN);
 	case '{': return makeToken(XToken::LEFT_BRACE);
 	case '}': return makeToken(XToken::RIGHT_BRACE);
+	case '[': return makeToken(XToken::LEFT_BRACKET);
+	case ']': return makeToken(XToken::RIGHT_BRACKET);
 	case ';': return makeToken(XToken::SEMICOLON);
 	case ',': return makeToken(XToken::COMMA);
 	case '.': return makeToken(XToken::DOT);
@@ -62,6 +64,8 @@ static const CCodeEditCtrl::Types typeMap[] =
 	CCodeEditCtrl::TYPE_OTHER, // RIGHT_PAREN
 	CCodeEditCtrl::TYPE_OTHER, // LEFT_BRACE
 	CCodeEditCtrl::TYPE_OTHER, // RIGHT_BRACE,
+	CCodeEditCtrl::TYPE_OTHER, // LEFT_BRACKET
+	CCodeEditCtrl::TYPE_OTHER, // RIGHT_BRACKET,
 	CCodeEditCtrl::TYPE_OTHER, // COMMA
 	CCodeEditCtrl::TYPE_OTHER, // DOT
 	CCodeEditCtrl::TYPE_OTHER, // MINUS
