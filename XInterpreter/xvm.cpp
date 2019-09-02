@@ -38,10 +38,10 @@ XVM::XVM()
 	defineNative("rms", std::make_shared<RMS>());
 }
 
-InterpretResult XVM::interpret(const char* source) 
+InterpretResult XVM::interpret(const char* source, bool trace, bool printByteCode)
 {
 	XScanner scanner(source);
-	XCompiler compiler(scanner, "", FunctionType::SCRIPT);
+	XCompiler compiler(scanner, "", FunctionType::SCRIPT, printByteCode);
 	std::shared_ptr<ObjFunction> function = compiler.compile();
 	if (!function) {
 		return InterpretResult::COMPILE_ERROR;
@@ -49,7 +49,7 @@ InterpretResult XVM::interpret(const char* source)
 	CallFrame frame(function, function->m_chunk.begin(), 0);
 	m_frames.push_back(frame);
 
-	return run();
+	return run(trace);
 }
 
 inline double	add		(double a, double b) { return a + b; };
@@ -152,22 +152,24 @@ InterpretResult XVM::binaryOp(OP op)
 }
 
 
-InterpretResult XVM::run() 
+InterpretResult XVM::run(bool trace) 
 {
-#ifdef DEBUG_TRACE_EXECUTION                       
-	DLG()->m_executionTrace.AppendFormat("== run ==\r\n");
-#endif
-	for (;;) {
-#ifdef DEBUG_TRACE_EXECUTION                                        
-		DLG()->m_executionTrace.AppendFormat("          ");
-		for (const auto& value : m_stack) {
-			DLG()->m_executionTrace.AppendFormat("[");
-			printValue(DLG()->m_executionTrace, value);
-			DLG()->m_executionTrace.AppendFormat("]");
+	if (trace)
+		DLG()->m_executionTrace.AppendFormat("== run ==\r\n");
+
+	for (;;)
+	{
+		if (trace)
+		{
+			DLG()->m_executionTrace.AppendFormat("          ");
+			for (const auto& value : m_stack) {
+				DLG()->m_executionTrace.AppendFormat("[");
+				printValue(DLG()->m_executionTrace, value);
+				DLG()->m_executionTrace.AppendFormat("]");
+			}
+			DLG()->m_executionTrace.AppendFormat("\r\n");
+			chunk().disassembleInstruction(ip(), true);
 		}
-		DLG()->m_executionTrace.AppendFormat("\r\n");
-		chunk().disassembleInstruction(ip(), true);
-#endif  
 		XOpCode instruction = readOpCode();
 		InterpretResult result = InterpretResult::OK;
 

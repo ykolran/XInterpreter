@@ -149,6 +149,7 @@ void XScanner::skipWhitespace()
 		case ' ':
 		case '\r':
 		case '\t':
+		case '\v':
 			advance();
 			break;
 		case '\n':

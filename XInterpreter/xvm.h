@@ -33,9 +33,9 @@ class XVM
 {
 public:
 	XVM();
-	InterpretResult interpret(const char* source);
+	InterpretResult interpret(const char* source, bool trace, bool printByteCode);
 private:
-	InterpretResult run();
+	InterpretResult run(bool trace);
 	XChunk::codeIterator& ip() { return m_frames.back().ip; }
 	XChunk& chunk() { return m_frames.back().function->m_chunk; }
 	inline XOpCode readOpCode() { return static_cast<XOpCode>(*ip()++); }

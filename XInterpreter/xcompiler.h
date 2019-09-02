@@ -21,7 +21,7 @@ enum class FunctionType
 class XCompiler
 {
 public:
-	XCompiler(XScanner& scanner, std::string name, FunctionType type);
+	XCompiler(XScanner& scanner, std::string name, FunctionType type, bool printByteCode);
 	std::shared_ptr<ObjFunction> compile();
 
 private:
@@ -107,6 +107,7 @@ private:
 	XScanner& m_scanner;
 	std::shared_ptr<ObjFunction> m_compilingFunction;
 	FunctionType m_type;
+	bool m_printByteCode;
 
 	XChunk& chunk() { return m_compilingFunction->m_chunk;  }
 

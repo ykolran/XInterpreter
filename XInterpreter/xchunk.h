@@ -3,9 +3,6 @@
 #include <vector>
 #include "xvalue.h"
 
-#define DEBUG_TRACE_EXECUTION
-#define DEBUG_PRINT_CODE
-
 class XChunk
 {
 public:

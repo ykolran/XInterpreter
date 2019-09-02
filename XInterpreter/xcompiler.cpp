@@ -54,10 +54,11 @@ XCompiler::ParseRule XCompiler::rules[] =
 { nullptr,				nullptr,			Precedence::NONE },       // _EOF             
 };
 
-XCompiler::XCompiler(XScanner& scanner, std::string name, FunctionType type) :
+XCompiler::XCompiler(XScanner& scanner, std::string name, FunctionType type, bool printByteCode) :
 	m_scanner(scanner),
 	m_compilingFunction(std::make_shared<ObjFunction>(name, 0)),
-	m_type(type)
+	m_type(type),
+	m_printByteCode(printByteCode)
 {
 	m_scopeDepth = 0;
 //	XTokenData t{ XToken::NIL, "", 0, 0 };
@@ -130,9 +131,9 @@ void XCompiler::declaration()
 	}
 }
 
-void XCompiler::function(FunctionType type) 
+void XCompiler::function(FunctionType type)
 {
-	XCompiler compiler(m_scanner, std::string(m_scanner.previous().start, m_scanner.previous().length), type);
+	XCompiler compiler(m_scanner, std::string(m_scanner.previous().start, m_scanner.previous().length), type, m_printByteCode);
 	compiler.beginScope();
 
 	// Compile the parameter list.                                
@@ -633,13 +634,11 @@ void XCompiler::patchJump(int offset)
 void XCompiler::endCompiler()
 {
 	emitReturn();
-#ifdef DEBUG_PRINT_CODE
-	if (!m_scanner.hadError()) 
+	if (!m_scanner.hadError() && m_printByteCode) 
 	{
 			chunk().disassemble(m_compilingFunction->m_name.empty() ? 
 				"<script>" : m_compilingFunction->m_name.c_str());
 	}
-#endif 
 }
 
 void XCompiler::endScope() 
