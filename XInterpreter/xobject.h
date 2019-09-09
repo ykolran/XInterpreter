@@ -33,6 +33,7 @@ struct ObjColumn : public Obj
 	ObjColumn(ColumnLength cl) :
 		Obj(ObjType::OWNING_COLUMN),
 		data(new double[cl.len]),
+		categorize(nullptr),
 		length(cl.len)
 	{
 	}
@@ -40,6 +41,7 @@ struct ObjColumn : public Obj
 	ObjColumn(ColumnLength cl, double* col) :
 		Obj(ObjType::SHARED_COLUMN),
 		data(col),
+		categorize(nullptr),
 		length(cl.len)
 	{
 	}
@@ -51,6 +53,7 @@ struct ObjColumn : public Obj
 	}
 
 	double * data;
+	double * categorize;
 	unsigned int length;
 
 };

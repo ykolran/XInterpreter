@@ -74,6 +74,6 @@ private:
 
 	std::vector<Value> m_stack;
 	std::vector<CallFrame> m_frames;
-	std::unordered_map<std::string, Value> globals;
+	std::unordered_map<std::string, Value> m_globals;
 	CLogDataFile* m_file;
 };

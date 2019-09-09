@@ -27,5 +27,6 @@ enum class XOpCode : uint8_t
 	JUMP_IF_FALSE,
 	LOOP,
 	CALL,
+	CATEGORIZE,
 	RETURN
 };

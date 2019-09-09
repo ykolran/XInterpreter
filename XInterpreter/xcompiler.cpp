@@ -63,8 +63,6 @@ XCompiler::XCompiler(XScanner& scanner, std::string name, FunctionType type, boo
 	m_printByteCode(printByteCode)
 {
 	m_scopeDepth = 0;
-//	XTokenData t{ XToken::NIL, "", 0, 0 };
-//	m_locals.emplace_back(t, 0);
 }
 
 std::shared_ptr<ObjFunction> XCompiler::compile()
@@ -72,7 +70,7 @@ std::shared_ptr<ObjFunction> XCompiler::compile()
 	m_scanner.advanceToken();
 	while (!m_scanner.match(XToken::_EOF))
 	{
-		usingDeclaration();
+		declaration();
 	}
 
 	endCompiler();
@@ -85,36 +83,40 @@ std::shared_ptr<ObjFunction> XCompiler::compile()
 
 void XCompiler::usingDeclaration()
 {
-	if (m_scanner.match(XToken::USING))
+	m_scanner.consume(XToken::IDENTIFIER, "Expected file-name after 'using'");
+	std::string filename(m_scanner.previous().start, m_scanner.previous().length);
+	auto it = std::find_if(DLG()->m_files.begin(), DLG()->m_files.end(), [&filename](const auto& a) {return a.first == filename; });
+	if (it == DLG()->m_files.end())
 	{
-		m_scanner.consume(XToken::IDENTIFIER, "Expected file-name after 'using'");
-		std::string filename(m_scanner.previous().start, m_scanner.previous().length);
-		auto it = std::find_if(DLG()->m_files.begin(), DLG()->m_files.end(), [&filename](const auto& a) {return a.first == filename; });
-		if (it == DLG()->m_files.end())
-		{
-			error((filename + " file not found").c_str());
-			return;
-		}
-		m_scanner.consume(XToken::LEFT_BRACE, "Expected '{' after using file-name.");
-		{
-			beginScope();
-			for (int i = 0; i < it->second->numColumns; i++)
-			{
-				XTokenData token{ XToken::IDENTIFIER, it->second->columns[i].c_str(), it->second->columns[i].size(), m_scanner.previous().line };
-				m_locals.emplace_back(token, m_scopeDepth);
-				emitConstant(Value(ColumnLength{ it->second->m_sizeFilled }, it->second->m_data[i]));
-			}
-			block();
-			endScope();
-		}
+		error((filename + " file not found").c_str());
+		return;
 	}
-	else
+	beginScope();
+
+	for (int i = 0; i < it->second->numColumns; i++)
 	{
-		declaration();
+		XTokenData token{ XToken::IDENTIFIER, it->second->columns[i].c_str(), it->second->columns[i].size(), m_scanner.previous().line };
+		m_locals.emplace_back(token, m_scopeDepth);
+		emitConstant(Value(ColumnLength{ it->second->m_sizeFilled }, it->second->m_data[i]));
 	}
 
-	if (m_scanner.panicMode())
-		m_scanner.synchronize();
+	bool categorize = false;
+	if (m_scanner.match(XToken::LEFT_BRACKET))
+	{
+		expression();
+		m_scanner.consume(XToken::RIGHT_BRACKET, "Expected ']' after expression");
+		emitInstruction(XOpCode::CATEGORIZE, it->second->numColumns);
+		categorize = true;
+	}
+
+	m_scanner.consume(XToken::LEFT_BRACE, "Expected '{' after using declaration.");
+	{
+		block();
+	}
+
+	if (categorize)
+		emitInstruction(XOpCode::POP);
+	endScope();
 }
 
 void XCompiler::declaration()
@@ -127,10 +129,17 @@ void XCompiler::declaration()
 	{
 		varDeclaration();
 	}
+	else if (m_scanner.match(XToken::USING))
+	{
+		usingDeclaration();
+	}
 	else 
 	{
 		statement();
 	}
+
+	if (m_scanner.panicMode())
+		m_scanner.synchronize();
 }
 
 void XCompiler::function(FunctionType type)
@@ -355,7 +364,7 @@ void XCompiler::block()
 	while (!m_scanner.check(XToken::RIGHT_BRACE) && 
 		   !m_scanner.check(XToken::_EOF)) 
 	{
-		usingDeclaration();
+		declaration();
 	}
 
 	m_scanner.consume(XToken::RIGHT_BRACE, "Expect '}' after block.");

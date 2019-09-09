@@ -92,6 +92,12 @@ InterpretResult XVM::binaryOp(OP op)
 			Value result(ColumnLength{ len });
 			for (unsigned int i = 0; i < len; i++)
 				result.asColumn().data[i] = op(a.asColumn().data[i], b.asColumn().data[i]);
+
+			if (a.asColumn().categorize != nullptr)
+				result.asColumn().categorize = a.asColumn().categorize;
+			else
+				result.asColumn().categorize = b.asColumn().categorize;
+
 			return push(result);
 		}
 		else if (len == 1)
@@ -102,6 +108,7 @@ InterpretResult XVM::binaryOp(OP op)
 			Value result(ColumnLength{ aPeek.asColumn().length });
 			for (unsigned int i = 0; i < aPeek.asColumn().length; i++)
 				result.asColumn().data[i] = op(a.asColumn().data[i], b.asColumn().data[0]);
+			result.asColumn().categorize = aPeek.asColumn().categorize;
 			return push(result);
 		}
 		else if (aPeek.asColumn().length == 1)
@@ -112,6 +119,7 @@ InterpretResult XVM::binaryOp(OP op)
 			Value result(ColumnLength{ len });
 			for (unsigned int i = 0; i < len; i++)
 				result.asColumn().data[i] = op(a.asColumn().data[0], b.asColumn().data[i]);
+			result.asColumn().categorize = b.asColumn().categorize;
 			return push(result);
 		}
 		else
@@ -128,6 +136,7 @@ InterpretResult XVM::binaryOp(OP op)
 		Value result(ColumnLength{ b.asColumn().length });
 		for (unsigned int i = 0; i < b.asColumn().length; i++)
 			result.asColumn().data[i] = op(a.asDouble(), b.asColumn().data[i]);
+		result.asColumn().categorize = b.asColumn().categorize;
 		return push(result);
 	}
 	else if (bPeek.isNumber() && aPeek.isColumn())
@@ -138,6 +147,7 @@ InterpretResult XVM::binaryOp(OP op)
 		Value result(ColumnLength{ a.asColumn().length });
 		for (unsigned int i = 0; i < a.asColumn().length; i++)
 			result.asColumn().data[i] = op(a.asColumn().data[i], b.asDouble());
+		result.asColumn().categorize = a.asColumn().categorize;
 		return push(result);
 	}
 	else
@@ -177,7 +187,7 @@ InterpretResult XVM::run(bool trace)
 		{
 		case XOpCode::CONSTANT:	result = push(readConstant());	break;
 		case XOpCode::NIL:		result = push(0.0);				break;
-		case XOpCode::_TRUE:		result = push(true);			break;
+		case XOpCode::_TRUE:	result = push(true);			break;
 		case XOpCode::_FALSE:	result = push(false);			break;
 		case XOpCode::POP:		pop();							break;
 		case XOpCode::GET_LOCAL:
@@ -192,11 +202,36 @@ InterpretResult XVM::run(bool trace)
 			m_stack[m_frames.back().slots + slot] = peek(0);
 			break;
 		}
+		case XOpCode::CATEGORIZE:
+		{
+			uint8_t numColumns = readByte();
+			const Value& categories = peek(0);
+			if (!categories.isColumn())
+			{
+				runtimeError("Categorize did not evaluate to a column.");
+				result = InterpretResult::RUNTIME_ERROR;
+				break;
+			}
+
+			for (int i = 0; i < numColumns; i++)
+			{
+				Value& constant = m_stack[m_stack.size() - 2 - i];
+				if (categories.asColumn().length != constant.asColumn().length)
+				{
+					runtimeError("Categorize length does not match.");
+					result = InterpretResult::RUNTIME_ERROR;
+					break;
+				}
+
+				constant.asColumn().categorize = categories.asColumn().data;
+			}
+			break;
+		}
 		case XOpCode::GET_GLOBAL:
 		{
 			const std::string& name = readConstant();
-			auto it = globals.find(name);
-			if (it == globals.end())
+			auto it = m_globals.find(name);
+			if (it == m_globals.end())
 			{
 				runtimeError("Undefined variable '%s'.", name.c_str());
 				return InterpretResult::RUNTIME_ERROR;
@@ -207,10 +242,10 @@ InterpretResult XVM::run(bool trace)
 		case XOpCode::DEFINE_GLOBAL:
 		{
 			const Value& c = readConstant();
-			if (globals.find(c) == globals.end())
-				globals.emplace(c, peek(0));
+			if (m_globals.find(c) == m_globals.end())
+				m_globals.emplace(c, peek(0));
 			else
-				globals.at(c) = peek(0);
+				m_globals.at(c) = peek(0);
 			pop();
 			break;
 		}
@@ -218,15 +253,15 @@ InterpretResult XVM::run(bool trace)
 		{
 			const Value& value = readConstant();
 			const std::string& name(value);
-			auto it = globals.find(name);
-			if (it == globals.end())
+			auto it = m_globals.find(name);
+			if (it == m_globals.end())
 			{
 				runtimeError("Undefined variable '%s'.", name.c_str());
 				return InterpretResult::RUNTIME_ERROR;
 			}
 			else
 			{
-				globals.at(name) = peek(0);
+				m_globals.at(name) = peek(0);
 			}
 			break;
 		}
@@ -246,6 +281,11 @@ InterpretResult XVM::run(bool trace)
 				for (unsigned int i = 0; i < b.asColumn().length && equals; i++)
 					equals = (b.asColumn().data[i] == a.asColumn().data[i]);
 				result = push(equals);
+			}
+			else
+			{
+				runtimeError("all parameters should be of the same type.");
+				result = InterpretResult::RUNTIME_ERROR;
 			}
 			break;
 		}
@@ -339,6 +379,15 @@ void XVM::printObj(CString& out, Value value) const
 			out.AppendFormat("%g ", value.asColumn().data[i]);
 		if (value.asColumn().length > 2)
 			out.Append("...");
+		if (value.asColumn().categorize != nullptr)
+		{
+			out.Append("{");
+			for (unsigned int i = 0; i < std::min(value.asColumn().length, 2u); i++)
+				out.AppendFormat("%g ", value.asColumn().categorize[i]);
+			if (value.asColumn().length > 2)
+				out.Append("...");
+			out.Append("}");
+		}
 		break;
 	}
 }
@@ -514,5 +563,5 @@ void XVM::runtimeError(const char* format, ...)
 
 void XVM::defineNative(const std::string& name, std::shared_ptr<ObjNative> native)
 {
-	globals.emplace(name, native);
+	m_globals.emplace(name, native);
 }

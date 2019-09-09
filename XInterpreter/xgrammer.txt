@@ -1,12 +1,15 @@
-﻿program				→	usingDeclaration* EOF
+﻿program				→	declaration* EOF
 
-usingDeclaration	→	"using" IDENTIFIER ("[" expression "]")? block
-						| declaration
-
-declaration			→	varDeclaration 
+declaration			→	funDeclaration
+						| varDeclaration 
+						| usingDeclaration
 						| statement
 
+funDeclaration		→	"fun" function
+
 varDeclaration		→	"var" IDENTIFIER "=" expression ";"
+
+usingDeclaration	→	"using" IDENTIFIER ("[" expression "]")? block
 
 statement			→	expressionStatement
 						| forStatement
@@ -33,7 +36,8 @@ equality			→	comparison ( ( "!=" | "==" ) comparison )*
 comparison			→	addition ( ( ">" | ">=" | "<" | "<=" ) addition )* 
 addition			→	multiplication ( ( "-" | "+" ) multiplication )* 
 multiplication		→	unary ( ( "/" | "*" ) unary )* 
-unary				→	( "!" | "-" ) unary | primary 
+unary				→	( "!" | "-" ) unary | call 
+call				→	IDENTIFIER "(" arguments? ")" | primary 
 primary				→	"true" | "false" | "this"
 						| NUMBER | STRING | IDENTIFIER | "(" expression ")"
  
@@ -42,3 +46,7 @@ STRING				→	'"' <any char except '"'>* '"'
 IDENTIFIER			→	ALPHA ( ALPHA | DIGIT )*
 ALPHA				→	'a' ... 'z' | 'A' ... 'Z' | '_'
 DIGIT				→	'0' ... '9'
+
+function			→	IDENTIFIER "(" parameters? ")" block
+parameters			→	IDENTIFIER ( "," IDENTIFIER )*
+arguments			→	expression ( "," expression )*

@@ -87,6 +87,8 @@ XChunk::codeIterator XChunk::disassembleInstruction(codeIterator it, bool trace)
 		return byteInstruction(out, "OP_CALL", it);
 	case XOpCode::RETURN:
 		return simpleInstruction(out, "OP_RETURN", it);
+	case XOpCode::CATEGORIZE:
+		return byteInstruction(out, "OP_CATEGORIZE", it);
 	default:
 		out.AppendFormat("Unknown opcode %d\r\n", instruction);
 		return it + 1;
@@ -131,7 +133,7 @@ XChunk::codeIterator XChunk::constantInstruction(CString& out, const char* name,
 		unsigned int i = 0;
 		for (; i < col.length && i < 3; i++)
 		{
-			out.AppendFormat("%g", col.data[i]);
+			out.AppendFormat("%g ", col.data[i]);
 		}
 		if (i != col.length)
 			out.Append("...");
@@ -139,5 +141,5 @@ XChunk::codeIterator XChunk::constantInstruction(CString& out, const char* name,
 	}
 	out.AppendFormat("'\r\n");
 	return it + 2;
-}
+}	
 
