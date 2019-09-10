@@ -10,13 +10,14 @@ enum class XToken {
 	BANG, BANG_EQUAL,
 	EQUAL, EQUAL_EQUAL,
 	GREATER, GREATER_EQUAL,
-	LESS, LESS_EQUAL,
+	LESS, LESS_EQUAL, 
+	AND, OR,
 
 	// Literals.                                     
 	IDENTIFIER, STRING, NUMBER,
 
 	// Keywords.                                     
-	AND, CLASS, ELSE, _FALSE, FUN, FOR, IF, NIL, OR,
+	CLASS, ELSE, _FALSE, FUN, FOR, IF, NIL, 
 	PRINT, RETURN, SUPER, _THIS, _TRUE, VAR, WHILE,
 	USING,
 

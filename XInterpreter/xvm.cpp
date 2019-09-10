@@ -58,6 +58,13 @@ inline double	multiply(double a, double b) { return a * b; };
 inline double	divide	(double a, double b) { return a / b; };
 inline bool		greater	(double a, double b) { return a > b; };
 inline bool		less	(double a, double b) { return a < b; };
+inline bool		equals	(double a, double b) { return a == b; };
+
+using boolBinaryOpType = bool(*)(double, double);
+using doubleBinaryOpType = double(*)(double, double);
+
+inline bool isBooleanResult(boolBinaryOpType) { return true; }
+inline bool isBooleanResult(doubleBinaryOpType) { return false; }
 
 template<typename OP>
 InterpretResult XVM::binaryOp(OP op)
@@ -65,6 +72,21 @@ InterpretResult XVM::binaryOp(OP op)
 	const Value& bPeek = peek(0);
 	const Value& aPeek = peek(1);
 
+	if (op == reinterpret_cast<OP>(equals))
+	{
+		if (bPeek.isBool() && aPeek.isBool())
+		{
+			Value b = pop();
+			Value a = pop();
+			return push(a.asBool() == b.asBool());
+		}
+		else if (bPeek.isString() && aPeek.isString())
+		{
+			Value b = pop();
+			Value a = pop();
+			return push(a.asString() == b.asString());
+		}
+	}
 	if (op == reinterpret_cast<OP>(add))
 	{
 		if (bPeek.isString() && aPeek.isString())
@@ -98,6 +120,7 @@ InterpretResult XVM::binaryOp(OP op)
 			else
 				result.asColumn().categorize = b.asColumn().categorize;
 
+			result.asColumn().isBoolean = isBooleanResult(op);
 			return push(result);
 		}
 		else if (len == 1)
@@ -109,6 +132,7 @@ InterpretResult XVM::binaryOp(OP op)
 			for (unsigned int i = 0; i < aPeek.asColumn().length; i++)
 				result.asColumn().data[i] = op(a.asColumn().data[i], b.asColumn().data[0]);
 			result.asColumn().categorize = aPeek.asColumn().categorize;
+			result.asColumn().isBoolean = isBooleanResult(op);
 			return push(result);
 		}
 		else if (aPeek.asColumn().length == 1)
@@ -120,6 +144,7 @@ InterpretResult XVM::binaryOp(OP op)
 			for (unsigned int i = 0; i < len; i++)
 				result.asColumn().data[i] = op(a.asColumn().data[0], b.asColumn().data[i]);
 			result.asColumn().categorize = b.asColumn().categorize;
+			result.asColumn().isBoolean = isBooleanResult(op);
 			return push(result);
 		}
 		else
@@ -137,6 +162,7 @@ InterpretResult XVM::binaryOp(OP op)
 		for (unsigned int i = 0; i < b.asColumn().length; i++)
 			result.asColumn().data[i] = op(a.asDouble(), b.asColumn().data[i]);
 		result.asColumn().categorize = b.asColumn().categorize;
+		result.asColumn().isBoolean = isBooleanResult(op);
 		return push(result);
 	}
 	else if (bPeek.isNumber() && aPeek.isColumn())
@@ -148,11 +174,14 @@ InterpretResult XVM::binaryOp(OP op)
 		for (unsigned int i = 0; i < a.asColumn().length; i++)
 			result.asColumn().data[i] = op(a.asColumn().data[i], b.asDouble());
 		result.asColumn().categorize = a.asColumn().categorize;
+		result.asColumn().isBoolean = isBooleanResult(op);
 		return push(result);
 	}
 	else
 	{
-		if (op == reinterpret_cast<OP>(add))
+		if (op == reinterpret_cast<OP>(equals))
+			runtimeError("Operands cannot be compared.");
+		else if (op == reinterpret_cast<OP>(add))
 			runtimeError("Operands must be numbers, vectors, or strings.");
 		else
 			runtimeError("Operands must be numbers or vectors.");
@@ -205,7 +234,7 @@ InterpretResult XVM::run(bool trace)
 		case XOpCode::CATEGORIZE:
 		{
 			uint8_t numColumns = readByte();
-			const Value& categories = peek(0);
+			Value& categories = m_stack[m_stack.size() - 1];
 			if (!categories.isColumn())
 			{
 				runtimeError("Categorize did not evaluate to a column.");
@@ -223,7 +252,7 @@ InterpretResult XVM::run(bool trace)
 					break;
 				}
 
-				constant.asColumn().categorize = categories.asColumn().data;
+				constant.asColumn().categorize = &categories.asColumn();
 			}
 			break;
 		}
@@ -265,37 +294,14 @@ InterpretResult XVM::run(bool trace)
 			}
 			break;
 		}
-		case XOpCode::EQUAL:
-		{
-			Value b = pop();
-			Value a = pop();
-			if (b.isBool() && a.isBool())
-				result = push(a.asBool() == b.asBool());
-			else if (b.isNumber() && a.isNumber())
-				result = push(a.asDouble() == b.asDouble());
-			else if (b.isString() && a.isString())
-				result = push(a.asString() == b.asString());
-			else if (b.isColumn() && a.isColumn())
-			{
-				bool equals = (b.asColumn().length == a.asColumn().length);
-				for (unsigned int i = 0; i < b.asColumn().length && equals; i++)
-					equals = (b.asColumn().data[i] == a.asColumn().data[i]);
-				result = push(equals);
-			}
-			else
-			{
-				runtimeError("all parameters should be of the same type.");
-				result = InterpretResult::RUNTIME_ERROR;
-			}
-			break;
-		}
+		case XOpCode::EQUAL:	result = binaryOp(equals);	 break;
 		case XOpCode::ADD:		result = binaryOp(add);		 break;
 		case XOpCode::SUBTRACT:	result = binaryOp(subtract); break;
 		case XOpCode::MULTIPLY:	result = binaryOp(multiply); break;
 		case XOpCode::DIVIDE:	result = binaryOp(divide);	 break;
 		case XOpCode::GREATER:	result = binaryOp(greater);	 break;
 		case XOpCode::LESS:		result = binaryOp(less);	 break;
-		case XOpCode::NOT:		result = push(!pop().asBool());		 break;
+		case XOpCode::NOT:		result = not();				 break;
 		case XOpCode::NEGATE:	result = negate();			 break;
 		case XOpCode::PRINT:
 			printValue(DLG()->m_output, pop());
@@ -348,48 +354,43 @@ InterpretResult XVM::run(bool trace)
 
 InterpretResult XVM::negate()
 {
-	if (!peek(0).isNumber())
+	if (peek(0).isNumber())
 	{
-		runtimeError("Operand must be a number.");
-		return InterpretResult::RUNTIME_ERROR;
+		return push(-pop().asDouble());
+	}
+	else if (peek(0).isColumn() && !peek(0).asColumn().isBoolean)
+	{
+		Value a = pop();
+		Value neg(ColumnLength{ a.asColumn().length });
+		for (unsigned int i = 0; i < neg.asColumn().length; i++)
+			neg.asColumn().data[i] = -a.asColumn().data[i];
+		neg.asColumn().categorize = a.asColumn().categorize;
+		return push(neg);
 	}
 
-	return push(-pop().asDouble());
+	runtimeError("Operand must be a number or number column.");
+	return InterpretResult::RUNTIME_ERROR;
 }
 
-void XVM::printObj(CString& out, Value value) const
+InterpretResult XVM::not()
 {
-	switch (value.obj->type)
+	if (peek(0).isNumber() || peek(0).isBool())
 	{
-	case ObjType::FUNCTION:
-		if (value.asFunction()->m_name.empty())
-			out.Append("<script>");
-		else
-			out.AppendFormat("<fn %s>", value.asFunction()->m_name.c_str());
-		break;
-	case ObjType::NATIVE:
-		out.AppendFormat("<ntv %s>", value.asNative()->m_name.c_str());
-		break;
-	case ObjType::STRING: 
-		out.Append(value.asString().c_str());
-		break;
-	case ObjType::OWNING_COLUMN:
-	case ObjType::SHARED_COLUMN:
-		for (unsigned int i = 0; i < std::min(value.asColumn().length, 2u); i++)
-			out.AppendFormat("%g ", value.asColumn().data[i]);
-		if (value.asColumn().length > 2)
-			out.Append("...");
-		if (value.asColumn().categorize != nullptr)
-		{
-			out.Append("{");
-			for (unsigned int i = 0; i < std::min(value.asColumn().length, 2u); i++)
-				out.AppendFormat("%g ", value.asColumn().categorize[i]);
-			if (value.asColumn().length > 2)
-				out.Append("...");
-			out.Append("}");
-		}
-		break;
+		return push(!pop().asBool());
 	}
+	else if (peek(0).isColumn())
+	{
+		Value a = pop();
+		Value n(ColumnLength{ a.asColumn().length });
+		for (unsigned int i = 0; i < n.asColumn().length; i++)
+			n.asColumn().data[i] = (a.asColumn().data[i] == 0);
+		n.asColumn().isBoolean = true;
+		n.asColumn().categorize = a.asColumn().categorize;
+		return push(n);
+	}
+
+	runtimeError("Operand must be a number or column.");
+	return InterpretResult::RUNTIME_ERROR;
 }
 
 InterpretResult XVM::callValue(Value callee, int argCount)
@@ -533,6 +534,56 @@ void XVM::printValue(CString& out, Value value) const
 	}
 }
 
+void XVM::printObj(CString& out, Value value) const
+{
+	switch (value.obj->type)
+	{
+	case ObjType::FUNCTION:
+		if (value.asFunction()->m_name.empty())
+			out.Append("<script>");
+		else
+			out.AppendFormat("<fn %s>", value.asFunction()->m_name.c_str());
+		break;
+	case ObjType::NATIVE:
+		out.AppendFormat("<ntv %s>", value.asNative()->m_name.c_str());
+		break;
+	case ObjType::STRING:
+		out.Append(value.asString().c_str());
+		break;
+	case ObjType::OWNING_COLUMN:
+	case ObjType::SHARED_COLUMN:
+		if (value.asColumn().isBoolean)
+		{
+			for (unsigned int i = 0; i < std::min(value.asColumn().length, 2u); i++)
+				out.AppendFormat("%s ", value.asColumn().data[i] != 0 ? "true" : "false");
+		}
+		else
+		{
+			for (unsigned int i = 0; i < std::min(value.asColumn().length, 2u); i++)
+				out.AppendFormat("%g ", value.asColumn().data[i]);
+		}
+		if (value.asColumn().length > 2)
+			out.Append("...");
+		if (value.asColumn().categorize != nullptr)
+		{
+			out.Append("{");
+			if (value.asColumn().categorize->isBoolean)
+			{
+				for (unsigned int i = 0; i < std::min(value.asColumn().length, 2u); i++)
+					out.AppendFormat("%s ", value.asColumn().categorize->data[i] != 0 ? "true" : "false");
+			}
+			else
+			{
+				for (unsigned int i = 0; i < std::min(value.asColumn().length, 2u); i++)
+					out.AppendFormat("%g ", value.asColumn().categorize->data[i]);
+			}
+			if (value.asColumn().length > 2)
+				out.Append("...");
+			out.Append("}");
+		}
+		break;
+	}
+}
 
 void XVM::runtimeError(const char* format, ...) 
 {

@@ -45,6 +45,7 @@ private:
 	inline const Value& readConstant() { return chunk().getConstant(*ip()++); }
 	
 	InterpretResult negate();
+	InterpretResult not();
 
 	inline const Value& peek(int distance) { return m_stack[m_stack.size() - 1 - distance]; }  	
 	inline InterpretResult push(const Value& value) 

@@ -34,7 +34,8 @@ struct ObjColumn : public Obj
 		Obj(ObjType::OWNING_COLUMN),
 		data(new double[cl.len]),
 		categorize(nullptr),
-		length(cl.len)
+		length(cl.len),
+		isBoolean(false)
 	{
 	}
 
@@ -42,7 +43,8 @@ struct ObjColumn : public Obj
 		Obj(ObjType::SHARED_COLUMN),
 		data(col),
 		categorize(nullptr),
-		length(cl.len)
+		length(cl.len),
+		isBoolean(false)
 	{
 	}
 
@@ -53,9 +55,9 @@ struct ObjColumn : public Obj
 	}
 
 	double * data;
-	double * categorize;
+	ObjColumn * categorize;
 	unsigned int length;
-
+	bool isBoolean;
 };
 
 struct ObjFunction : public Obj

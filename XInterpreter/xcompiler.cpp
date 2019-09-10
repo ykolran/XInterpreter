@@ -32,10 +32,11 @@ XCompiler::ParseRule XCompiler::rules[] =
 { nullptr,				&XCompiler::binary,	Precedence::COMPARISON }, // GREATER_EQUAL   
 { nullptr,				&XCompiler::binary,	Precedence::COMPARISON }, // LESS            
 { nullptr,				&XCompiler::binary,	Precedence::COMPARISON }, // LESS_EQUAL      
+{ nullptr,				&XCompiler::and,	Precedence::AND },        // AND             
+{ nullptr,				&XCompiler::or,		Precedence::OR },         // OR              
 { &XCompiler::variable,	nullptr,			Precedence::NONE },       // IDENTIFIER      
 { &XCompiler::string,	nullptr,			Precedence::NONE },       // STRING          
 { &XCompiler::number,   nullptr,			Precedence::NONE },       // NUMBER          
-{ nullptr,				&XCompiler::and,	Precedence::AND },        // AND             
 { nullptr,				nullptr,			Precedence::NONE },       // CLASS           
 { nullptr,				nullptr,			Precedence::NONE },       // ELSE            
 { &XCompiler::literal,	nullptr,			Precedence::NONE },       // FALSE           
@@ -43,7 +44,6 @@ XCompiler::ParseRule XCompiler::rules[] =
 { nullptr,				nullptr,			Precedence::NONE },       // FUN             
 { nullptr,				nullptr,			Precedence::NONE },       // IF              
 { &XCompiler::literal,	nullptr,			Precedence::NONE },       // NIL             
-{ nullptr,				&XCompiler::or,		Precedence::OR },         // OR              
 { nullptr,				nullptr,			Precedence::NONE },       // PRINT           
 { nullptr,				nullptr,			Precedence::NONE },       // RETURN          
 { nullptr,				nullptr,			Precedence::NONE },       // SUPER           
@@ -105,7 +105,7 @@ void XCompiler::usingDeclaration()
 	{
 		expression();
 		m_scanner.consume(XToken::RIGHT_BRACKET, "Expected ']' after expression");
-		emitInstruction(XOpCode::CATEGORIZE, it->second->numColumns);
+		emitInstruction(XOpCode::CATEGORIZE, static_cast<uint8_t>(it->second->numColumns));
 		categorize = true;
 	}
 

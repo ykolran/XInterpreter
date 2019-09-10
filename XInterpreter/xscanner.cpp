@@ -83,6 +83,8 @@ static const CCodeEditCtrl::Types typeMap[] =
 	CCodeEditCtrl::TYPE_OTHER, // GREATER_EQUAL,
 	CCodeEditCtrl::TYPE_OTHER, // LESS
 	CCodeEditCtrl::TYPE_OTHER, // LESS_EQUAL,
+	CCodeEditCtrl::TYPE_OTHER, // AND
+	CCodeEditCtrl::TYPE_OTHER, // OR,
 
 	// Literals.                                     
 	CCodeEditCtrl::TYPE_OTHER, // IDENTIFIER
@@ -90,7 +92,6 @@ static const CCodeEditCtrl::Types typeMap[] =
 	CCodeEditCtrl::TYPE_NUMBER, // NUMBER,
 
 	// Keywords.                                     
-	CCodeEditCtrl::TYPE_KEYWORD, // AND
 	CCodeEditCtrl::TYPE_KEYWORD, // CLASS
 	CCodeEditCtrl::TYPE_KEYWORD, // ELSE
 	CCodeEditCtrl::TYPE_KEYWORD, // _FALSE
@@ -98,7 +99,6 @@ static const CCodeEditCtrl::Types typeMap[] =
 	CCodeEditCtrl::TYPE_KEYWORD, // FOR
 	CCodeEditCtrl::TYPE_KEYWORD, // IF
 	CCodeEditCtrl::TYPE_KEYWORD, // NIL
-	CCodeEditCtrl::TYPE_KEYWORD, // OR,
 	CCodeEditCtrl::TYPE_KEYWORD, // PRINT
 	CCodeEditCtrl::TYPE_KEYWORD, // RETURN
 	CCodeEditCtrl::TYPE_KEYWORD, // SUPER
@@ -240,7 +240,6 @@ XTokenData XScanner::identifier()
 XToken XScanner::identifierType()
 {
 	switch (m_start[0]) {
-	case 'a': return checkKeyword(1, "nd", XToken::AND);
 	case 'c': return checkKeyword(1, "lass", XToken::CLASS);
 	case 'e': return checkKeyword(1, "lse", XToken::ELSE);
 	case 'f':
@@ -256,7 +255,6 @@ XToken XScanner::identifierType()
 		break;
 	case 'i': return checkKeyword(1, "f", XToken::IF);
 	case 'n': return checkKeyword(1, "il", XToken::NIL);
-	case 'o': return checkKeyword(1, "r", XToken::OR);
 	case 'p': return checkKeyword(1, "rint", XToken::PRINT);
 	case 'r': return checkKeyword(1, "eturn", XToken::RETURN);
 	case 's': return checkKeyword(1, "uper", XToken::SUPER);
